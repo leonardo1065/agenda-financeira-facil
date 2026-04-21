@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Wallet, AlertCircle, CheckCircle2, Clock, Search } from "lucide-react";
+import { Plus, Wallet, AlertCircle, CheckCircle2, Clock, Search, LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,8 @@ import { BillFormDialog } from "@/components/bills/BillFormDialog";
 import { PayDialog } from "@/components/bills/PayDialog";
 import { BillCard } from "@/components/bills/BillCard";
 import { formatCurrency, daysUntil } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
+import { Navigate } from "@tanstack/react-router";
 import type { Bill } from "@/components/bills/types";
 
 export const Route = createFileRoute("/")({
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+  const { session, loading: authLoading, signOut, user } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -40,8 +43,19 @@ function HomePage() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    if (session) load();
+  }, [session]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!session) {
+    return <Navigate to="/login" />;
+  }
 
   async function handleDelete(b: Bill) {
     if (!confirm(`Excluir "${b.description}"?`)) return;
@@ -98,10 +112,18 @@ function HomePage() {
             <div className="h-9 w-9 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur">
               <Wallet className="h-5 w-5" />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-lg font-semibold leading-tight">Agenda Financeira</h1>
-              <p className="text-xs text-primary-foreground/70">Contas a pagar</p>
+              <p className="text-xs text-primary-foreground/70 truncate">{user?.email}</p>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={signOut}
+              className="text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
 
           <div className="mt-6">

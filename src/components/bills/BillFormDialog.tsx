@@ -82,21 +82,31 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
     const numAmount = parseFloat(amount.replace(/\./g, "").replace(",", ".")) || 0;
     setSaving(true);
     try {
-      const payload = {
-        description: description.trim(),
-        category,
-        amount: numAmount,
-        due_date: dueDate,
-        recurrence,
-        barcode: barcode || null,
-        notes: notes.trim() || null,
-      };
       if (editing) {
-        const { error } = await supabase.from("bills").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("bills").update({
+          description: description.trim(),
+          category,
+          amount: numAmount,
+          due_date: dueDate,
+          recurrence,
+          barcode: barcode || null,
+          notes: notes.trim() || null,
+        }).eq("id", editing.id);
         if (error) throw error;
         toast.success("Conta atualizada");
       } else {
-        const { error } = await supabase.from("bills").insert(payload);
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) throw new Error("Sessão expirada. Faça login novamente.");
+        const { error } = await supabase.from("bills").insert({
+          description: description.trim(),
+          category,
+          amount: numAmount,
+          due_date: dueDate,
+          recurrence,
+          barcode: barcode || null,
+          notes: notes.trim() || null,
+          user_id: userData.user.id,
+        });
         if (error) throw error;
         toast.success("Conta adicionada");
       }
