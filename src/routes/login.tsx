@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, Navigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Wallet, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,10 @@ function LoginPage() {
         </form>
 
         <p className="mt-6 text-xs text-muted-foreground text-center">
-          Cadastro restrito. Solicite o acesso ao administrador.
+          Ainda não tem acesso?{" "}
+          <Link to="/signup" className="font-medium text-primary hover:underline">
+            Criar conta
+          </Link>
         </p>
       </div>
     </div>
