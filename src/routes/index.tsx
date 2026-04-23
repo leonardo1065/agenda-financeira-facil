@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Wallet, AlertCircle, Clock, Search, LogOut, Loader2, TrendingUp } from "lucide-react";
+import { Plus, Wallet, AlertCircle, Clock, Search, LogOut, Loader2, TrendingUp, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,7 @@ import { PayDialog } from "@/components/bills/PayDialog";
 import { BillCard } from "@/components/bills/BillCard";
 import { IncomeFormDialog } from "@/components/income/IncomeFormDialog";
 import { IncomeCard } from "@/components/income/IncomeCard";
+import { ProfileDialog } from "@/components/ProfileDialog";
 import { formatCurrency, daysUntil } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { Navigate } from "@tanstack/react-router";
@@ -33,6 +34,7 @@ function HomePage() {
   const [paying, setPaying] = useState<Bill | null>(null);
   const [incomeFormOpen, setIncomeFormOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<IncomeEntry | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -147,6 +149,14 @@ function HomePage() {
               <h1 className="text-lg font-semibold leading-tight">Agenda Financeira</h1>
               <p className="text-xs text-primary-foreground/70 truncate">{user?.email}</p>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setProfileOpen(true)}
+              className="text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+            >
+              <UserCog className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -291,6 +301,14 @@ function HomePage() {
         onSaved={load}
         editing={editingIncome}
       />
+      {user?.id && (
+        <ProfileDialog
+          open={profileOpen}
+          onOpenChange={setProfileOpen}
+          userId={user.id}
+          email={user.email}
+        />
+      )}
     </div>
   );
 }
