@@ -65,6 +65,45 @@ export type Database = {
         }
         Relationships: []
       }
+      income_entries: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          id: string
+          notes: string | null
+          received_date: string
+          recurrence: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          notes?: string | null
+          received_date: string
+          recurrence?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          received_date?: string
+          recurrence?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

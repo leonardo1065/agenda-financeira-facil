@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Button } from "@/components/ui/button";
-import { X, Camera } from "lucide-react";
+import { X, Camera, Keyboard } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -13,6 +13,7 @@ interface Props {
 export function BarcodeScanner({ open, onClose, onDetected }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [manualCode, setManualCode] = useState("");
   const controlsRef = useRef<{ stop: () => void } | null>(null);
 
   useEffect(() => {
@@ -38,14 +39,27 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
           return;
         }
         if (cancelled) return;
-        const controls = await reader.decodeFromVideoDevice(
-          back.deviceId,
+        const controls = await reader.decodeFromConstraints(
+          {
+            video: {
+              deviceId: back.deviceId ? { exact: back.deviceId } : undefined,
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              focusMode: "continuous",
+            } as MediaTrackConstraints,
+          },
           videoRef.current!,
           (result, _err, ctrl) => {
             if (result) {
-              ctrl.stop();
-              onDetected(result.getText());
-              onClose();
+              const text = result.getText().replace(/\D/g, "");
+              if ([44, 47, 48].includes(text.length)) {
+                ctrl.stop();
+                onDetected(text);
+                onClose();
+              } else if (text.length > 0) {
+                setManualCode(text);
+              }
             }
           }
         );
@@ -78,17 +92,28 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
       </div>
       <div className="relative flex-1 flex items-center justify-center overflow-hidden">
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-        {/* Guia visual */}
-        <div className="absolute inset-x-8 h-32 border-2 border-white/80 rounded-lg pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]" />
+        <div className="absolute inset-x-4 h-24 border-2 border-primary-foreground/90 rounded-lg pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
         {error && (
           <div className="absolute bottom-8 left-4 right-4 bg-destructive text-destructive-foreground p-3 rounded-md text-sm text-center">
             {error}
           </div>
         )}
       </div>
-      <p className="p-4 text-white/80 text-sm text-center">
-        Aponte para o código de barras do boleto
-      </p>
+      <div className="space-y-3 p-4 text-primary-foreground/80 text-sm text-center">
+        <p>Aproxime, mantenha o boleto reto e preencha manualmente se a câmera capturar só parte do código.</p>
+        <div className="flex gap-2">
+          <input
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            placeholder="Digite ou complete o código"
+            className="min-w-0 flex-1 rounded-md border border-primary-foreground/20 bg-background/95 px-3 py-2 text-sm text-foreground outline-none"
+          />
+          <Button type="button" variant="secondary" onClick={() => manualCode && onDetected(manualCode)} disabled={!manualCode}>
+            <Keyboard className="h-4 w-4" /> Usar
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
