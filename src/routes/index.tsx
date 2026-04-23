@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Wallet, AlertCircle, CheckCircle2, Clock, Search, LogOut, Loader2, TrendingUp } from "lucide-react";
+import { Plus, Wallet, AlertCircle, Clock, Search, LogOut, Loader2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
