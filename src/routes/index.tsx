@@ -162,10 +162,19 @@ function HomePage() {
               Total a pagar
             </p>
             <p className="text-3xl font-bold mt-1">{formatCurrency(stats.totalPending)}</p>
+            <p className="mt-1 text-sm text-primary-foreground/80">
+              Receitas registradas · {formatCurrency(stats.totalIncome)}
+            </p>
             {stats.overdue.length > 0 && (
               <p className="mt-1 text-sm text-warning-foreground bg-warning/30 inline-flex items-center gap-1 px-2 py-1 rounded-md">
                 <AlertCircle className="h-3.5 w-3.5" />
                 {stats.overdue.length} em atraso · {formatCurrency(stats.totalOverdue)}
+              </p>
+            )}
+            {stats.dueSoon.length > 0 && (
+              <p className="mt-2 text-sm text-warning-foreground bg-warning/30 flex w-fit items-center gap-1 px-2 py-1 rounded-md">
+                <Clock className="h-3.5 w-3.5" />
+                {stats.dueSoon.length} conta{stats.dueSoon.length > 1 ? "s" : ""} vencendo até amanhã
               </p>
             )}
           </div>
@@ -186,9 +195,9 @@ function HomePage() {
             value={stats.overdue.length}
           />
           <StatCard
-            icon={<CheckCircle2 className="h-4 w-4 text-success" />}
-            label="Pagas"
-            value={stats.paid.length}
+            icon={<TrendingUp className="h-4 w-4 text-success" />}
+            label="Receitas"
+            value={incomeEntries.length}
           />
         </div>
       </div>
@@ -205,15 +214,19 @@ function HomePage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={() => { setEditingIncome(null); setIncomeFormOpen(true); }} className="shrink-0">
+            <TrendingUp className="h-4 w-4" /> Receita
+          </Button>
           <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="shrink-0">
-            <Plus className="h-4 w-4" /> Nova
+            <Plus className="h-4 w-4" /> Conta
           </Button>
         </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList className="grid grid-cols-3 w-full">
+          <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="pending">Pendentes</TabsTrigger>
             <TabsTrigger value="paid">Pagas</TabsTrigger>
+            <TabsTrigger value="income">Receitas</TabsTrigger>
             <TabsTrigger value="all">Todas</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -221,6 +234,20 @@ function HomePage() {
         <div className="mt-4 space-y-2">
           {loading ? (
             <div className="text-center py-12 text-muted-foreground text-sm">Carregando…</div>
+          ) : tab === "income" ? (
+            filteredIncome.length === 0 ? (
+              <div className="text-center py-16">
+                <TrendingUp className="h-10 w-10 mx-auto text-muted-foreground/40" />
+                <p className="mt-3 text-sm text-muted-foreground">Nenhuma receita encontrada.</p>
+                <Button className="mt-4" onClick={() => { setEditingIncome(null); setIncomeFormOpen(true); }}>
+                  <Plus className="h-4 w-4" /> Adicionar receita
+                </Button>
+              </div>
+            ) : (
+              filteredIncome.map((income) => (
+                <IncomeCard key={income.id} income={income} onEdit={(x) => { setEditingIncome(x); setIncomeFormOpen(true); }} onDelete={handleDeleteIncome} />
+              ))
+            )
           ) : filtered.length === 0 ? (
             <div className="text-center py-16">
               <Wallet className="h-10 w-10 mx-auto text-muted-foreground/40" />
@@ -258,6 +285,12 @@ function HomePage() {
         editing={editing}
       />
       <PayDialog bill={paying} onClose={() => setPaying(null)} onSaved={load} />
+      <IncomeFormDialog
+        open={incomeFormOpen}
+        onOpenChange={setIncomeFormOpen}
+        onSaved={load}
+        editing={editingIncome}
+      />
     </div>
   );
 }
