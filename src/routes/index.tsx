@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Wallet, AlertCircle, CheckCircle2, Clock, Search, LogOut, Loader2 } from "lucide-react";
+import { Plus, Wallet, AlertCircle, CheckCircle2, Clock, Search, LogOut, Loader2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,10 +9,13 @@ import { toast } from "sonner";
 import { BillFormDialog } from "@/components/bills/BillFormDialog";
 import { PayDialog } from "@/components/bills/PayDialog";
 import { BillCard } from "@/components/bills/BillCard";
+import { IncomeFormDialog } from "@/components/income/IncomeFormDialog";
+import { IncomeCard } from "@/components/income/IncomeCard";
 import { formatCurrency, daysUntil } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { Navigate } from "@tanstack/react-router";
 import type { Bill } from "@/components/bills/types";
+import type { IncomeEntry } from "@/components/income/types";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -21,12 +24,15 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { session, loading: authLoading, signOut, user } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
+  const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"pending" | "paid" | "all">("pending");
+  const [tab, setTab] = useState<"pending" | "paid" | "income" | "all">("pending");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Bill | null>(null);
   const [paying, setPaying] = useState<Bill | null>(null);
+  const [incomeFormOpen, setIncomeFormOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<IncomeEntry | null>(null);
 
   async function load() {
     setLoading(true);
@@ -38,6 +44,15 @@ function HomePage() {
       toast.error("Erro ao carregar contas", { description: error.message });
     } else {
       setBills((data ?? []) as Bill[]);
+    }
+    const { data: incomeData, error: incomeError } = await (supabase as any)
+      .from("income_entries")
+      .select("*")
+      .order("received_date", { ascending: false });
+    if (incomeError) {
+      toast.error("Erro ao carregar receitas", { description: incomeError.message });
+    } else {
+      setIncomeEntries((incomeData ?? []) as IncomeEntry[]);
     }
     setLoading(false);
   }
@@ -75,15 +90,25 @@ function HomePage() {
     load();
   }
 
+  async function handleDeleteIncome(income: IncomeEntry) {
+    if (!confirm(`Excluir receita "${income.description}"?`)) return;
+    const { error } = await (supabase as any).from("income_entries").delete().eq("id", income.id);
+    if (error) return toast.error("Erro", { description: error.message });
+    toast.success("Receita excluída");
+    load();
+  }
+
   const stats = useMemo(() => {
     const pending = bills.filter((b) => b.status !== "paid");
     const overdue = pending.filter((b) => daysUntil(b.due_date) < 0);
     const paid = bills.filter((b) => b.status === "paid");
+    const dueSoon = pending.filter((b) => daysUntil(b.due_date) <= 1);
     const totalPending = pending.reduce((s, b) => s + Number(b.amount), 0);
     const totalOverdue = overdue.reduce((s, b) => s + Number(b.amount), 0);
     const totalPaid = paid.reduce((s, b) => s + Number(b.paid_amount ?? b.amount), 0);
-    return { pending, overdue, paid, totalPending, totalOverdue, totalPaid };
-  }, [bills]);
+    const totalIncome = incomeEntries.reduce((s, income) => s + Number(income.amount), 0);
+    return { pending, overdue, dueSoon, paid, totalPending, totalOverdue, totalPaid, totalIncome };
+  }, [bills, incomeEntries]);
 
   const filtered = useMemo(() => {
     let list = bills;
@@ -99,6 +124,12 @@ function HomePage() {
     }
     return list;
   }, [bills, tab, search, stats]);
+
+  const filteredIncome = useMemo(() => {
+    if (!search.trim()) return incomeEntries;
+    const q = search.toLowerCase();
+    return incomeEntries.filter((income) => income.description.toLowerCase().includes(q) || income.category.toLowerCase().includes(q));
+  }, [incomeEntries, search]);
 
   return (
     <div className="min-h-screen bg-background">
