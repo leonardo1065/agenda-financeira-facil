@@ -34,11 +34,15 @@ export const Route = createRootRoute({
       { title: "Agenda Financeira — Contas a Pagar" },
       { name: "description", content: "Controle suas contas a pagar com leitor de boleto, lembretes e baixa de pagamentos." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Agenda Financeira" },
-      { property: "og:description", content: "Suas contas a pagar organizadas com leitor de boleto." },
+      { property: "og:title", content: "Agenda Financeira — Contas a Pagar" },
+      { property: "og:description", content: "Controle suas contas a pagar com leitor de boleto, lembretes e baixa de pagamentos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Agenda Financeira — Contas a Pagar" },
+      { name: "twitter:description", content: "Controle suas contas a pagar com leitor de boleto, lembretes e baixa de pagamentos." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/710e1474-caca-4c45-993f-91e01d7240f2/id-preview-48eff3da--06b359cc-0f7d-40dc-b00c-0cd23bf4c645.lovable.app-1776945303343.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/710e1474-caca-4c45-993f-91e01d7240f2/id-preview-48eff3da--06b359cc-0f7d-40dc-b00c-0cd23bf4c645.lovable.app-1776945303343.png" },
     ],
     links: [
       {
