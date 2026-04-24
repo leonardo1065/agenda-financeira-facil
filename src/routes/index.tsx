@@ -63,17 +63,6 @@ function HomePage() {
     if (session) load();
   }, [session]);
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  if (!session) {
-    return <Navigate to="/login" />;
-  }
-
   async function handleDelete(b: Bill) {
     if (!confirm(`Excluir "${b.description}"?`)) return;
     const { error } = await supabase.from("bills").delete().eq("id", b.id);
@@ -132,6 +121,17 @@ function HomePage() {
     const q = search.toLowerCase();
     return incomeEntries.filter((income) => income.description.toLowerCase().includes(q) || income.category.toLowerCase().includes(q));
   }, [incomeEntries, search]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!session) {
+    return <Navigate to="/login" />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
