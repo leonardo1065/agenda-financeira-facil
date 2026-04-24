@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Button } from "@/components/ui/button";
-import { X, Camera, Keyboard } from "lucide-react";
+import { X, Camera, Keyboard, Loader2 } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -14,11 +14,14 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
+  const [starting, setStarting] = useState(false);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setStarting(true);
 
     const hints = new Map();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
@@ -30,43 +33,52 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
     const reader = new BrowserMultiFormatReader(hints);
 
     let cancelled = false;
+
     (async () => {
       try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const back = devices.find((d) => /back|rear|traseira|environment/i.test(d.label)) ?? devices[0];
-        if (!back) {
-          setError("Nenhuma câmera encontrada.");
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Seu navegador não suporta câmera. Use Chrome/Safari atualizado em HTTPS.");
+        }
+        // Solicita a câmera traseira diretamente — funciona melhor que listVideoInputDevices em mobile
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
           return;
         }
-        if (cancelled) return;
-        const controls = await reader.decodeFromConstraints(
-          {
-            video: {
-              deviceId: back.deviceId ? { exact: back.deviceId } : undefined,
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-              focusMode: "continuous",
-            } as MediaTrackConstraints,
-          },
-          videoRef.current!,
-          (result, _err, ctrl) => {
-            if (result) {
-              const text = result.getText().replace(/\D/g, "");
-              if ([44, 47, 48].includes(text.length)) {
-                ctrl.stop();
-                onDetected(text);
-                onClose();
-              } else if (text.length > 0) {
-                setManualCode(text);
-              }
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+
+        const controls = await reader.decodeFromStream(stream, video, (result, _err, ctrl) => {
+          if (result) {
+            const text = result.getText().replace(/\D/g, "");
+            if ([44, 47, 48].includes(text.length)) {
+              ctrl.stop();
+              onDetected(text);
+              onClose();
+            } else if (text.length > 0) {
+              setManualCode(text);
             }
           }
-        );
+        });
         controlsRef.current = controls;
+        setStarting(false);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Erro ao acessar a câmera";
+        const err = e as DOMException | Error;
+        let msg = err.message || "Erro ao acessar a câmera";
+        if (err.name === "NotAllowedError") msg = "Permissão de câmera negada. Habilite nas configurações do navegador.";
+        else if (err.name === "NotFoundError") msg = "Nenhuma câmera encontrada no dispositivo.";
+        else if (err.name === "NotReadableError") msg = "Câmera em uso por outro aplicativo.";
+        else if (location.protocol !== "https:" && location.hostname !== "localhost") {
+          msg = "A câmera só funciona em HTTPS. Abra o app em https://";
+        }
         setError(msg);
+        setStarting(false);
       }
     })();
 
@@ -74,6 +86,8 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
       cancelled = true;
       controlsRef.current?.stop();
       controlsRef.current = null;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     };
   }, [open, onClose, onDetected]);
 
@@ -93,6 +107,11 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
       <div className="relative flex-1 flex items-center justify-center overflow-hidden">
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
         <div className="absolute inset-x-4 h-24 border-2 border-primary-foreground/90 rounded-lg pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
+        {starting && !error && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-3 py-1.5 rounded-md text-xs flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Abrindo câmera…
+          </div>
+        )}
         {error && (
           <div className="absolute bottom-8 left-4 right-4 bg-destructive text-destructive-foreground p-3 rounded-md text-sm text-center">
             {error}
