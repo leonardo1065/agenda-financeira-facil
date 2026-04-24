@@ -31,6 +31,7 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   const [notes, setNotes] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [highlightSave, setHighlightSave] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -51,6 +52,7 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
         setBarcode("");
         setNotes("");
       }
+      setHighlightSave(false);
     }
   }, [open, editing]);
 
@@ -90,6 +92,7 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
       toast.success("Boleto interpretado", {
         description: `Preenchido: ${filled.join(" e ")}. Revise e clique em Adicionar para salvar.`,
       });
+      setHighlightSave(true);
     } else {
       toast.info("Código capturado", {
         description:
@@ -260,7 +263,15 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className={
+                highlightSave && !editing
+                  ? "relative ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg shadow-primary/40 animate-pulse"
+                  : undefined
+              }
+            >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editing ? "Salvar" : "Adicionar"}
             </Button>
