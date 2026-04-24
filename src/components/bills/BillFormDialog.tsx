@@ -57,21 +57,37 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   function applyBarcode(raw: string) {
     const info = parseBoleto(raw);
     setBarcode(info.barcode);
+
+    if (info.type === "desconhecido") {
+      toast.warning("Código não reconhecido", {
+        description: `Foram lidos ${info.barcode.length} dígitos. Linha digitável precisa ter 47 (boleto) ou 48 (concessionária).`,
+      });
+      return;
+    }
+
+    const filled: string[] = [];
     if (info.amount && info.amount > 0) {
       setAmount(info.amount.toFixed(2).replace(".", ","));
+      filled.push("valor");
     }
     if (info.dueDate) {
       setDueDate(toISODate(info.dueDate));
+      filled.push("vencimento");
     }
     setCategory((c) => (c === "outros" ? "boleto" : c));
-    toast.success("Boleto interpretado", {
-      description:
-        info.type === "bancario"
-          ? "Valor e vencimento preenchidos automaticamente."
-          : info.type === "arrecadacao"
-          ? "Conta de concessionária — valor preenchido. Confira o vencimento."
-          : "Código capturado. Confira valor e vencimento.",
-    });
+
+    if (filled.length > 0) {
+      toast.success("Boleto interpretado", {
+        description: `Preenchido: ${filled.join(" e ")}.`,
+      });
+    } else {
+      toast.info("Código capturado", {
+        description:
+          info.type === "arrecadacao"
+            ? "Conta de concessionária — confira valor e vencimento manualmente."
+            : "Não foi possível extrair valor/vencimento. Confira manualmente.",
+      });
+    }
   }
 
   async function handleSave() {
