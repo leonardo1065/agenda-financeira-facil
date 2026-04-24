@@ -150,8 +150,27 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto">
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          // Não permite fechar o formulário enquanto o scanner está aberto
+          // (evita "pular" para a tela inicial ao escanear).
+          if (!next && scannerOpen) return;
+          onOpenChange(next);
+        }}
+      >
+        <DialogContent
+          className="max-w-md max-h-[92vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            if (scannerOpen) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if (scannerOpen) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (scannerOpen) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{editing ? "Editar conta" : "Nova conta"}</DialogTitle>
           </DialogHeader>
