@@ -14,7 +14,7 @@ import { IncomeCard } from "@/components/income/IncomeCard";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { formatCurrency, daysUntil } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
-import { Navigate } from "@tanstack/react-router";
+import { Navigate, useNavigate } from "@tanstack/react-router";
 import type { Bill } from "@/components/bills/types";
 import type { IncomeEntry } from "@/components/income/types";
 
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { session, loading: authLoading, signOut, user } = useAuth();
+  const navigate = useNavigate();
   const [bills, setBills] = useState<Bill[]>([]);
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,7 +161,10 @@ function HomePage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={signOut}
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/login", replace: true });
+              }}
               className="text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
             >
               <LogOut className="h-4 w-4" />
