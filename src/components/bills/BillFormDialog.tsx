@@ -153,7 +153,6 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
                 placeholder="Cole aqui a linha digitável (47 ou 48 dígitos)…"
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
-                onBlur={() => barcode && applyBarcode(barcode)}
                 rows={2}
                 className="font-mono text-xs"
               />
