@@ -76,9 +76,19 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
     }
     setCategory((c) => (c === "outros" ? "boleto" : c));
 
+    // Preenche descrição padrão se ainda estiver vazia, para o usuário
+    // não esquecer de salvar — a conta só aparece na lista após Adicionar.
+    setDescription((d) => {
+      if (d.trim()) return d;
+      const dueLabel = info.dueDate
+        ? info.dueDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+        : "";
+      return dueLabel ? `Boleto ${dueLabel}` : "Boleto";
+    });
+
     if (filled.length > 0) {
       toast.success("Boleto interpretado", {
-        description: `Preenchido: ${filled.join(" e ")}.`,
+        description: `Preenchido: ${filled.join(" e ")}. Revise e clique em Adicionar para salvar.`,
       });
     } else {
       toast.info("Código capturado", {
