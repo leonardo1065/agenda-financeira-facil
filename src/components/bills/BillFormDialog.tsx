@@ -32,6 +32,43 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [highlightSave, setHighlightSave] = useState(false);
+  const [pendingStream, setPendingStream] = useState<MediaStream | null>(null);
+
+  async function openScanner() {
+    // Solicita a câmera diretamente no clique para preservar o gesto do usuário
+    // (alguns navegadores bloqueiam getUserMedia chamado depois de awaits/efeitos).
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        toast.error("Câmera não suportada", { description: "Use Chrome/Safari atualizado em HTTPS." });
+        return;
+      }
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+      setPendingStream(stream);
+      setScannerOpen(true);
+    } catch (e) {
+      const err = e as DOMException;
+      let msg = err.message || "Erro ao acessar câmera";
+      if (err.name === "NotAllowedError") msg = "Permissão negada. Habilite a câmera nas configurações do navegador.";
+      else if (err.name === "NotFoundError") msg = "Nenhuma câmera encontrada.";
+      else if (location.protocol !== "https:" && location.hostname !== "localhost") {
+        msg = "A câmera só funciona em HTTPS.";
+      }
+      toast.error("Não foi possível abrir a câmera", { description: msg });
+    }
+  }
+
+  function closeScanner() {
+    setScannerOpen(false);
+    setPendingStream(null);
+  }
 
   useEffect(() => {
     if (open) {
@@ -194,7 +231,7 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  onClick={() => setScannerOpen(true)}
+                  onClick={openScanner}
                 >
                   <Camera className="h-4 w-4" /> Escanear
                 </Button>
@@ -300,8 +337,9 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
 
       <BarcodeScanner
         open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
+        onClose={closeScanner}
         onDetected={applyBarcode}
+        initialStream={pendingStream}
       />
     </>
   );

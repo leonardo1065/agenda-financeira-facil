@@ -8,9 +8,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onDetected: (text: string) => void;
+  /** Stream já obtido via gesto do usuário (clique). Evita bloqueio de permissão. */
+  initialStream?: MediaStream | null;
 }
 
-export function BarcodeScanner({ open, onClose, onDetected }: Props) {
+export function BarcodeScanner({ open, onClose, onDetected, initialStream }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
@@ -39,11 +41,19 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error("Seu navegador não suporta câmera. Use Chrome/Safari atualizado em HTTPS.");
         }
-        // Solicita a câmera traseira diretamente — funciona melhor que listVideoInputDevices em mobile
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        });
+        // Usa stream já obtido no clique (preserva gesto do usuário) ou solicita agora
+        let stream = initialStream ?? null;
+        if (!stream) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: "environment" } },
+              audio: false,
+            });
+          } catch {
+            // Fallback: qualquer câmera disponível
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          }
+        }
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -89,7 +99,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [open, onClose, onDetected]);
+  }, [open, onClose, onDetected, initialStream]);
 
   if (!open) return null;
 
