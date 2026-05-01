@@ -39,7 +39,6 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       BarcodeFormat.PDF_417,
     ]);
     hints.set(DecodeHintType.TRY_HARDER, true);
-    hints.set(DecodeHintType.ALSO_INVERTED, true);
     const reader = new BrowserMultiFormatReader(hints);
 
     let cancelled = false;
