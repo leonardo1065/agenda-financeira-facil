@@ -32,26 +32,23 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [highlightSave, setHighlightSave] = useState(false);
-  const [pendingStream, setPendingStream] = useState<MediaStream | null>(null);
+  const [pendingStreamRequest, setPendingStreamRequest] = useState<Promise<MediaStream> | null>(null);
 
   async function openScanner() {
-    // Solicita a câmera diretamente no clique para preservar o gesto do usuário
-    // (alguns navegadores bloqueiam getUserMedia chamado depois de awaits/efeitos).
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         toast.error("Câmera não suportada", { description: "Use Chrome/Safari atualizado em HTTPS." });
         return;
       }
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
+      // A chamada de permissão acontece diretamente neste clique; o scanner apenas aguarda essa promessa.
+      const streamRequest = navigator.mediaDevices
+        .getUserMedia({
           video: { facingMode: { ideal: "environment" } },
           audio: false,
-        });
-      } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      }
-      setPendingStream(stream);
+        })
+        .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: false }));
+
+      setPendingStreamRequest(streamRequest);
       setScannerOpen(true);
     } catch (e) {
       const err = e as DOMException;
@@ -64,10 +61,9 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
       toast.error("Não foi possível abrir a câmera", { description: msg });
     }
   }
-
   function closeScanner() {
     setScannerOpen(false);
-    setPendingStream(null);
+    setPendingStreamRequest(null);
   }
 
   useEffect(() => {
@@ -339,7 +335,7 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
         open={scannerOpen}
         onClose={closeScanner}
         onDetected={applyBarcode}
-        initialStream={pendingStream}
+        initialStreamRequest={pendingStreamRequest}
       />
     </>
   );
