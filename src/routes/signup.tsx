@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, type FormEvent } from "react";
-import { KeyRound, Loader2, Wallet } from "lucide-react";
+import { Loader2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,6 @@ function SignupPage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [accessCode, setAccessCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (!loading && session) {
@@ -31,7 +30,7 @@ function SignupPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createAccount({ data: { displayName, email, password, accessCode } });
+      await createAccount({ data: { displayName, email, password } });
       const { error } = await signIn(email, password);
       if (error) {
         toast.success("Conta criada", { description: "Entre com seu e-mail e senha." });
@@ -101,22 +100,6 @@ function SignupPage() {
               minLength={6}
               maxLength={72}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="accessCode">Código de acesso</Label>
-            <div className="relative">
-              <KeyRound className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="accessCode"
-                className="pl-8"
-                type="password"
-                autoComplete="off"
-                value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value)}
-                required
-                maxLength={80}
-              />
-            </div>
           </div>
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
