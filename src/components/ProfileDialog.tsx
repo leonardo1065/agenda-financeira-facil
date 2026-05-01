@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Loader2, Phone } from "lucide-react";
+import { Loader2, Phone, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileDialogProps {
@@ -47,6 +48,10 @@ export function ProfileDialog({ open, onOpenChange, userId, email }: ProfileDial
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -54,6 +59,9 @@ export function ProfileDialog({ open, onOpenChange, userId, email }: ProfileDial
     let mounted = true;
     setLoading(true);
     setError(null);
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError(null);
 
     (supabase as any)
       .from("profiles")
@@ -103,6 +111,33 @@ export function ProfileDialog({ open, onOpenChange, userId, email }: ProfileDial
     onOpenChange(false);
   }
 
+  async function handleChangePassword(event: FormEvent) {
+    event.preventDefault();
+    setPasswordError(null);
+
+    if (newPassword.length < 6) {
+      setPasswordError("A senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("As senhas não conferem.");
+      return;
+    }
+
+    setChangingPassword(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+
+    if (updateError) {
+      toast.error("Erro ao trocar senha", { description: updateError.message });
+      return;
+    }
+
+    toast.success("Senha atualizada com sucesso");
+    setNewPassword("");
+    setConfirmPassword("");
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
@@ -140,6 +175,60 @@ export function ProfileDialog({ open, onOpenChange, userId, email }: ProfileDial
               Salvar
             </Button>
           </DialogFooter>
+        </form>
+
+        <Separator />
+
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold">Trocar senha</h3>
+            <p className="text-xs text-muted-foreground">Defina uma nova senha de acesso.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">Nova senha</Label>
+            <div className="relative">
+              <Lock className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="newPassword"
+                type="password"
+                className="pl-8"
+                autoComplete="new-password"
+                placeholder="Mínimo de 6 caracteres"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setPasswordError(null);
+                }}
+                disabled={changingPassword}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+            <div className="relative">
+              <Lock className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="confirmPassword"
+                type="password"
+                className="pl-8"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setPasswordError(null);
+                }}
+                disabled={changingPassword}
+                required
+              />
+            </div>
+            {passwordError && <p className="text-xs font-medium text-destructive">{passwordError}</p>}
+          </div>
+
+          <Button type="submit" variant="outline" className="w-full" disabled={changingPassword}>
+            {changingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
+            Atualizar senha
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
