@@ -31,7 +31,15 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       BarcodeFormat.CODE_128,
       BarcodeFormat.CODE_39,
       BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.CODE_93,
+      BarcodeFormat.CODABAR,
+      BarcodeFormat.QR_CODE,
+      BarcodeFormat.DATA_MATRIX,
+      BarcodeFormat.PDF_417,
     ]);
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    hints.set(DecodeHintType.ALSO_INVERTED, true);
     const reader = new BrowserMultiFormatReader(hints);
 
     let cancelled = false;
