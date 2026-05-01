@@ -35,8 +35,10 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   const [pendingStream, setPendingStream] = useState<MediaStream | null>(null);
 
   async function openScanner() {
-    // Solicita a câmera diretamente no clique para preservar o gesto do usuário
-    // (alguns navegadores bloqueiam getUserMedia chamado depois de awaits/efeitos).
+    // Abre a tela do scanner imediatamente e solicita a câmera no mesmo clique.
+    // Assim o usuário não fica preso em uma tela sem retorno enquanto a permissão/carregamento acontece.
+    setPendingStream(null);
+    setScannerOpen(true);
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         toast.error("Câmera não suportada", { description: "Use Chrome/Safari atualizado em HTTPS." });
