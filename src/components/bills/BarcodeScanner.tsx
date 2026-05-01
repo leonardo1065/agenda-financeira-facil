@@ -8,11 +8,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onDetected: (text: string) => void;
-  /** Stream já obtido via gesto do usuário (clique). Evita bloqueio de permissão. */
-  initialStream?: MediaStream | null;
+  /** Solicitação de câmera iniciada no clique do usuário. Evita bloqueio de permissão. */
+  initialStreamRequest?: Promise<MediaStream> | null;
 }
 
-export function BarcodeScanner({ open, onClose, onDetected, initialStream }: Props) {
+export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
@@ -41,8 +41,8 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStream }: Pro
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error("Seu navegador não suporta câmera. Use Chrome/Safari atualizado em HTTPS.");
         }
-        // Usa stream já obtido no clique (preserva gesto do usuário) ou solicita agora
-        let stream = initialStream ?? null;
+        // Aguarda a solicitação iniciada no clique (preserva gesto do usuário) ou solicita agora
+        let stream = initialStreamRequest ? await initialStreamRequest : null;
         if (!stream) {
           try {
             stream = await navigator.mediaDevices.getUserMedia({
@@ -99,19 +99,20 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStream }: Pro
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [open, onClose, onDetected, initialStream]);
+  }, [open, onClose, onDetected, initialStreamRequest]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col pointer-events-auto">
       <div className="flex items-center justify-between p-4 text-white">
         <div className="flex items-center gap-2">
           <Camera className="h-5 w-5" />
           <span className="font-medium">Escanear boleto</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10">
+        <Button variant="ghost" onClick={onClose} className="text-white hover:bg-white/10">
           <X className="h-5 w-5" />
+          Fechar
         </Button>
       </div>
       <div className="relative flex-1 flex items-center justify-center overflow-hidden">
