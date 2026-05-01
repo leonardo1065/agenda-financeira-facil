@@ -73,13 +73,17 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
 
         const controls = await reader.decodeFromStream(stream, video, (result, _err, ctrl) => {
           if (result) {
-            const text = result.getText().replace(/\D/g, "");
-            if ([44, 47, 48].includes(text.length)) {
+            const raw = result.getText();
+            const digits = raw.replace(/\D/g, "");
+            // Procura uma sequência numérica válida (44/47/48 dígitos) dentro do resultado
+            const match = digits.match(/\d{47,48}/) || digits.match(/\d{44}/);
+            const found = match ? match[0] : digits;
+            if ([44, 47, 48].includes(found.length)) {
               ctrl.stop();
-              onDetected(text);
+              onDetected(found);
               onClose();
-            } else if (text.length > 0) {
-              setManualCode(text);
+            } else if (digits.length > 0) {
+              setManualCode(digits);
             }
           }
         });
