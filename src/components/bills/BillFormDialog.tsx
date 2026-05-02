@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Camera, ScanLine, Loader2 } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
-import { parseBoleto } from "@/lib/boleto";
+import { parseBoleto, isPixPayload, parsePix } from "@/lib/boleto";
 import { toISODate } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -90,6 +90,29 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   }, [open, editing]);
 
   function applyBarcode(raw: string) {
+    // Pix Copia e Cola (QR Code)
+    if (isPixPayload(raw)) {
+      const pix = parsePix(raw);
+      if (pix) {
+        setBarcode(pix.payload);
+        setCategory((c) => (c === "outros" ? "boleto" : c));
+        if (pix.amount && pix.amount > 0) {
+          setAmount(pix.amount.toFixed(2).replace(".", ","));
+        }
+        setDescription((d) => {
+          if (d.trim()) return d;
+          return pix.merchant ? `Pix - ${pix.merchant}` : "Pix";
+        });
+        toast.success("Pix detectado", {
+          description: pix.merchant
+            ? `${pix.merchant}${pix.amount ? ` — R$ ${pix.amount.toFixed(2)}` : ""}`
+            : "Confira valor e vencimento.",
+        });
+        setHighlightSave(true);
+        return;
+      }
+    }
+
     const info = parseBoleto(raw);
     setBarcode(info.barcode);
 
