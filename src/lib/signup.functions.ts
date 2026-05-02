@@ -8,9 +8,13 @@ const signupSchema = z.object({
   displayName: z.string().trim().min(2, "Informe seu nome.").max(80),
 });
 
+export type SignupResult =
+  | { ok: true }
+  | { ok: false; code: "email_exists" | "weak_password" | "unknown"; message: string };
+
 export const createAccountWithAccessCode = createServerFn({ method: "POST" })
   .inputValidator((input) => signupSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<SignupResult> => {
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -19,10 +23,14 @@ export const createAccountWithAccessCode = createServerFn({ method: "POST" })
     });
 
     if (error) {
-      if (error.message.toLowerCase().includes("already")) {
-        throw new Error("Este e-mail já está cadastrado.");
+      const msg = error.message.toLowerCase();
+      if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+        return { ok: false, code: "email_exists", message: "Este e-mail já está cadastrado." };
       }
-      throw new Error("Não foi possível criar sua conta.");
+      if (msg.includes("password")) {
+        return { ok: false, code: "weak_password", message: "Senha muito fraca." };
+      }
+      return { ok: false, code: "unknown", message: "Não foi possível criar sua conta." };
     }
 
     if (created.user?.id) {
