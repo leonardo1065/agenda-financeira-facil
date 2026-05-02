@@ -97,16 +97,28 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
         setBarcode(pix.payload);
         setCategory((c) => (c === "outros" ? "boleto" : c));
         if (pix.amount && pix.amount > 0) {
-          setAmount(pix.amount.toFixed(2).replace(".", ","));
+          // Formata em pt-BR com 2 casas (ex.: 1.234,56)
+          setAmount(
+            pix.amount.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }),
+          );
         }
         setDescription((d) => {
           if (d.trim()) return d;
           return pix.merchant ? `Pix - ${pix.merchant}` : "Pix";
         });
+        const valorFmt = pix.amount
+          ? pix.amount.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })
+          : null;
         toast.success("Pix detectado", {
-          description: pix.merchant
-            ? `${pix.merchant}${pix.amount ? ` — R$ ${pix.amount.toFixed(2)}` : ""}`
-            : "Confira valor e vencimento.",
+          description: valorFmt
+            ? `${pix.merchant ?? "Recebedor"} — ${valorFmt}`
+            : "QR sem valor fixo. Informe o valor manualmente.",
         });
         setHighlightSave(true);
         return;
