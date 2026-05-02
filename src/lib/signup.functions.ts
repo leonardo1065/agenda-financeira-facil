@@ -24,35 +24,19 @@ export const checkEmailAvailability = createServerFn({ method: "POST" })
   .inputValidator((input) => emailCheckSchema.parse(input))
   .handler(async ({ data }): Promise<EmailCheckResult> => {
     try {
-      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-      } as { page: number; perPage: number; email?: string } as never);
-      // Fallback: filter manually since listUsers doesn't support email filter directly in all versions
-      if (error) return { ok: false, message: "Não foi possível validar o e-mail." };
-      const exists = (list?.users ?? []).some(
-        (u) => (u.email ?? "").toLowerCase() === data.email,
-      );
-      if (exists) return { ok: true, available: false };
-
-      // More reliable: try fetching all pages until found or empty (cap pages)
-      let page = 1;
-      const perPage = 200;
-      // Already checked page 1 (size 1) above; redo with larger page size
-      while (page <= 25) {
-        const { data: pageData, error: pageErr } = await supabaseAdmin.auth.admin.listUsers({
-          page,
-          perPage,
-        });
-        if (pageErr) return { ok: false, message: "Não foi possível validar o e-mail." };
-        const users = pageData?.users ?? [];
-        if (users.some((u) => (u.email ?? "").toLowerCase() === data.email)) {
-          return { ok: true, available: false };
+      // Attempt to generate a recovery link as a probe — succeeds only when email exists.
+      const { data: linkData, error } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email: data.email,
+      });
+      if (error) {
+        const msg = (error.message || "").toLowerCase();
+        if (msg.includes("not found") || msg.includes("no user")) {
+          return { ok: true, available: true };
         }
-        if (users.length < perPage) break;
-        page += 1;
+        return { ok: true, available: true };
       }
-      return { ok: true, available: true };
+      return { ok: true, available: !linkData?.user };
     } catch {
       return { ok: false, message: "Não foi possível validar o e-mail." };
     }
