@@ -77,3 +77,64 @@ export function formatBarcode(digits: string): string {
   }
   return d;
 }
+
+// =============== Pix EMV (BR Code / Copia e Cola) ===============
+
+export interface PixInfo {
+  type: "pix";
+  payload: string;
+  amount: number | null;
+  merchant: string | null;
+  city: string | null;
+  txid: string | null;
+}
+
+/** Detecta payload Pix EMV. Começa com "000201" e contém "br.gov.bcb.pix". */
+export function isPixPayload(text: string): boolean {
+  const t = text.trim();
+  return /^000201/.test(t) && /br\.gov\.bcb\.pix/i.test(t);
+}
+
+/** Faz parse simples do TLV EMV do Pix. */
+export function parsePix(input: string): PixInfo | null {
+  const text = input.trim();
+  if (!isPixPayload(text)) return null;
+
+  const tlv: Record<string, string> = {};
+  let i = 0;
+  while (i < text.length - 4) {
+    const id = text.substring(i, i + 2);
+    const len = parseInt(text.substring(i + 2, i + 4), 10);
+    if (isNaN(len)) break;
+    const value = text.substring(i + 4, i + 4 + len);
+    tlv[id] = value;
+    i += 4 + len;
+  }
+
+  // Sub-TLV do campo 62 (additional data) → 05 = txid
+  let txid: string | null = null;
+  if (tlv["62"]) {
+    const sub = tlv["62"];
+    let j = 0;
+    while (j < sub.length - 4) {
+      const sid = sub.substring(j, j + 2);
+      const slen = parseInt(sub.substring(j + 2, j + 4), 10);
+      if (isNaN(slen)) break;
+      const sval = sub.substring(j + 4, j + 4 + slen);
+      if (sid === "05") txid = sval;
+      j += 4 + slen;
+    }
+  }
+
+  const amountStr = tlv["54"];
+  const amount = amountStr ? parseFloat(amountStr) : null;
+
+  return {
+    type: "pix",
+    payload: text,
+    amount: amount && !isNaN(amount) ? amount : null,
+    merchant: tlv["59"] ?? null,
+    city: tlv["60"] ?? null,
+    txid,
+  };
+}
