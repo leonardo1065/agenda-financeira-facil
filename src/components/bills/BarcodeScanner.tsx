@@ -194,7 +194,17 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
         )}
       </div>
       <div className="space-y-3 p-4 text-primary-foreground/80 text-sm text-center">
-        <p>Aproxime, mantenha o boleto reto e preencha manualmente se a câmera capturar só parte do código.</p>
+        <p>Aproxime, mantenha o boleto reto. Se o código não for detectado, toque em "Ler com OCR" para tentar via texto.</p>
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          onClick={runOcr}
+          disabled={ocrRunning || starting}
+        >
+          {ocrRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
+          {ocrRunning ? "Lendo texto…" : "Ler linha digitável (OCR)"}
+        </Button>
         <div className="flex gap-2">
           <input
             value={manualCode}
