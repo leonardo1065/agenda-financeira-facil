@@ -30,7 +30,12 @@ function SignupPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createAccount({ data: { displayName, email, password } });
+      const result = await createAccount({ data: { displayName, email, password } });
+      if (!result.ok) {
+        toast.error("Não foi possível cadastrar", { description: result.message });
+        setSubmitting(false);
+        return;
+      }
       const { error } = await signIn(email, password);
       if (error) {
         toast.success("Conta criada", { description: "Entre com seu e-mail e senha." });
