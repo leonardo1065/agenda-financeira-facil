@@ -25,7 +25,7 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
     setError(null);
     setStarting(true);
 
-    const hints = new Map();
+    const hints = new Map<DecodeHintType, unknown>();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
       BarcodeFormat.ITF,
       BarcodeFormat.CODE_128,
@@ -39,7 +39,13 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       BarcodeFormat.PDF_417,
     ]);
     hints.set(DecodeHintType.TRY_HARDER, true);
-    const reader = new BrowserMultiFormatReader(hints);
+    // Boletos bancários usam ITF com 44 dígitos. O ZXing rejeita ITF longo por padrão
+    // (aceita só 6–14), então liberamos explicitamente os tamanhos esperados.
+    hints.set(DecodeHintType.ALLOWED_LENGTHS, [44, 47, 48]);
+    const reader = new BrowserMultiFormatReader(hints, {
+      delayBetweenScanAttempts: 80,
+      tryPlayVideoTimeout: 3000,
+    });
 
     let cancelled = false;
 
