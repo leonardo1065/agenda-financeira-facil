@@ -126,15 +126,66 @@ export function parsePix(input: string): PixInfo | null {
     }
   }
 
-  const amountStr = tlv["54"];
-  const amount = amountStr ? parseFloat(amountStr) : null;
-
   return {
     type: "pix",
     payload: text,
-    amount: amount && !isNaN(amount) ? amount : null,
-    merchant: tlv["59"] ?? null,
-    city: tlv["60"] ?? null,
+    amount: parsePixAmount(tlv["54"]),
+    merchant: tlv["59"] ? tlv["59"].trim() || null : null,
+    city: tlv["60"] ? tlv["60"].trim() || null : null,
     txid,
   };
+}
+
+/**
+ * Faz parse robusto do campo 54 (Transaction Amount) do EMV Pix.
+ *
+ * Pelo padrão BR Code, o valor deve ser numérico em string com ponto
+ * como separador decimal (ex.: "150.00", "1234.5", "10"). Na prática,
+ * QR Codes gerados por diferentes PSPs/apps podem trazer variações:
+ *   - vírgula como separador decimal ("150,00")
+ *   - prefixo "R$" ou espaços ("R$ 150,00", " 150.00 ")
+ *   - separador de milhar ("1.234,56" ou "1,234.56")
+ *   - sem casas decimais ("150")
+ *   - zero à esquerda ("0150.00")
+ *
+ * Retorna null para vazio, "0", "0.00", ou strings inválidas.
+ */
+export function parsePixAmount(raw: string | undefined | null): number | null {
+  if (!raw) return null;
+  let s = String(raw).trim();
+  if (!s) return null;
+
+  // Remove símbolo de moeda e espaços internos
+  s = s.replace(/[Rr]\$\s*/g, "").replace(/\s+/g, "");
+  if (!s) return null;
+
+  // Mantém só dígitos, ponto, vírgula e sinal de menos (não esperado mas seguro)
+  s = s.replace(/[^\d.,-]/g, "");
+  if (!s) return null;
+
+  const hasDot = s.includes(".");
+  const hasComma = s.includes(",");
+
+  if (hasDot && hasComma) {
+    // Assume formato pt-BR: "1.234,56" → último separador é decimal (vírgula)
+    // ou en-US: "1,234.56" → último separador é decimal (ponto).
+    const lastDot = s.lastIndexOf(".");
+    const lastComma = s.lastIndexOf(",");
+    if (lastComma > lastDot) {
+      // vírgula é decimal
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      // ponto é decimal
+      s = s.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    // Apenas vírgula → trata como decimal
+    s = s.replace(",", ".");
+  }
+  // Apenas ponto (ou nenhum separador) → já está no formato correto
+
+  const n = parseFloat(s);
+  if (!isFinite(n) || isNaN(n) || n <= 0) return null;
+  // Arredonda para 2 casas para evitar artefatos de ponto flutuante
+  return Math.round(n * 100) / 100;
 }
