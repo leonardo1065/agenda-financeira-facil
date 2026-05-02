@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Button } from "@/components/ui/button";
-import { X, Camera, Keyboard, Loader2 } from "lucide-react";
+import { X, Camera, Keyboard, Loader2, ScanText } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -17,6 +17,7 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
   const [error, setError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [starting, setStarting] = useState(false);
+  const [ocrRunning, setOcrRunning] = useState(false);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -119,6 +120,52 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
   }, [open, onClose, onDetected, initialStreamRequest]);
 
   if (!open) return null;
+
+  async function runOcr() {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) return;
+    setOcrRunning(true);
+    try {
+      const canvas = document.createElement("canvas");
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas indisponível");
+      ctx.drawImage(video, 0, 0, w, h);
+      // Pré-processamento: escala de cinza + contraste
+      const img = ctx.getImageData(0, 0, w, h);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        const v = g > 140 ? 255 : g < 90 ? 0 : g;
+        d[i] = d[i + 1] = d[i + 2] = v;
+      }
+      ctx.putImageData(img, 0, 0);
+
+      const Tesseract = (await import("tesseract.js")).default;
+      const { data } = await Tesseract.recognize(canvas, "eng", {
+        // Restringe a dígitos e separadores típicos da linha digitável
+      } as never);
+      const text = (data?.text ?? "").replace(/[^\d\s.]/g, " ");
+      const digits = text.replace(/\D/g, "");
+      const match = digits.match(/\d{47,48}/) || digits.match(/\d{44}/);
+      if (match) {
+        onDetected(match[0]);
+        onClose();
+      } else if (digits.length >= 20) {
+        setManualCode(digits.slice(0, 48));
+        setError("OCR leu parcial. Complete os dígitos abaixo e toque em Usar.");
+      } else {
+        setError("OCR não conseguiu ler. Aproxime, melhore a luz e tente novamente.");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha no OCR");
+    } finally {
+      setOcrRunning(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col pointer-events-auto">
