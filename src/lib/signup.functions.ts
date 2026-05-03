@@ -23,22 +23,11 @@ export type EmailCheckResult =
 export const checkEmailAvailability = createServerFn({ method: "POST" })
   .inputValidator((input) => emailCheckSchema.parse(input))
   .handler(async ({ data }): Promise<EmailCheckResult> => {
-    try {
-      // Use listUsers with a filter — does NOT send emails or trigger rate limits.
-      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-        // @ts-expect-error filter is supported by GoTrue admin API
-        filter: `email.eq.${data.email}`,
-      });
-      if (error) return { ok: false, message: error.message };
-      const found = (list?.users ?? []).some(
-        (u) => (u.email ?? "").toLowerCase() === data.email
-      );
-      return { ok: true, available: !found };
-    } catch {
-      return { ok: false, message: "Não foi possível validar o e-mail." };
-    }
+    // Probe disabled: previous implementation triggered real recovery emails
+    // and exhausted the auth rate limit, blocking signup/login/reset.
+    // Availability is enforced server-side at signup via createUser error mapping.
+    void data;
+    return { ok: true, available: true };
   });
 
 export const createAccountWithAccessCode = createServerFn({ method: "POST" })
