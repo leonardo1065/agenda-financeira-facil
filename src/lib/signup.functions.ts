@@ -24,19 +24,18 @@ export const checkEmailAvailability = createServerFn({ method: "POST" })
   .inputValidator((input) => emailCheckSchema.parse(input))
   .handler(async ({ data }): Promise<EmailCheckResult> => {
     try {
-      // Attempt to generate a recovery link as a probe — succeeds only when email exists.
-      const { data: linkData, error } = await supabaseAdmin.auth.admin.generateLink({
-        type: "recovery",
-        email: data.email,
+      // Use listUsers with a filter — does NOT send emails or trigger rate limits.
+      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1,
+        // @ts-expect-error filter is supported by GoTrue admin API
+        filter: `email.eq.${data.email}`,
       });
-      if (error) {
-        const msg = (error.message || "").toLowerCase();
-        if (msg.includes("not found") || msg.includes("no user")) {
-          return { ok: true, available: true };
-        }
-        return { ok: true, available: true };
-      }
-      return { ok: true, available: !linkData?.user };
+      if (error) return { ok: false, message: error.message };
+      const found = (list?.users ?? []).some(
+        (u) => (u.email ?? "").toLowerCase() === data.email
+      );
+      return { ok: true, available: !found };
     } catch {
       return { ok: false, message: "Não foi possível validar o e-mail." };
     }
