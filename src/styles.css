@@ -158,7 +158,7 @@
 
 @keyframes scanner-laser-move {
   0%   { transform: translateY(0); }
-  50%  { transform: translateY(5.25rem); }
+  50%  { transform: translateY(13.5rem); }
   100% { transform: translateY(0); }
 }
 .scanner-laser {
