@@ -43,12 +43,23 @@ export function parseBoleto(input: string): BoletoInfo {
 
   if (digits.length === 48) {
     result.type = "arrecadacao";
-    // Arrecadação: valor nos primeiros 12 dígitos significativos
-    // Posições 4-14 do código de barras = valor (11 dígitos)
-    // Linha digitável: blocos de 12 dígitos com DV ao final de cada (mod 10/11)
-    // Pegamos o valor das posições 4-14 da linha digitável
-    const valor = parseInt(digits.substring(4, 15), 10);
-    if (!isNaN(valor)) result.amount = valor / 100;
+    // Linha digitável de arrecadação = 4 blocos de 11 dígitos + 1 DV cada (= 48).
+    // Removendo os DVs reconstruímos o código de barras (44 dígitos):
+    //   barcode = bloco1[0..10] + bloco2[0..10] + bloco3[0..10] + bloco4[0..10]
+    // No código de barras, o VALOR fica nas posições 5–15 (11 dígitos).
+    // O 3º dígito indica se o valor é efetivo (6/7 → moeda) ou referência (8/9).
+    // Arrecadação NÃO possui fator de vencimento padronizado — a data, quando
+    // existe, fica no campo livre e varia por concessionária; deixamos null.
+    const barcode44 =
+      digits.substring(0, 11) +
+      digits.substring(12, 23) +
+      digits.substring(24, 35) +
+      digits.substring(36, 47);
+    const valorIdentifier = barcode44.charAt(2); // 6,7 = efetivo | 8,9 = referência
+    const valor = parseInt(barcode44.substring(4, 15), 10);
+    if (!isNaN(valor) && (valorIdentifier === "6" || valorIdentifier === "7")) {
+      result.amount = valor / 100;
+    }
     return result;
   }
 
