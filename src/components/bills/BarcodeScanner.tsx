@@ -181,9 +181,9 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       </div>
       <div className="relative flex-1 flex items-center justify-center overflow-hidden">
         <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-        <div className="absolute inset-x-4 h-24 border-2 border-primary-foreground/90 rounded-lg pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
-        <div className="absolute inset-x-4 h-24 pointer-events-none overflow-hidden rounded-lg">
-          <div className="scanner-laser absolute left-2 right-2 h-[2px] bg-red-500 shadow-[0_0_8px_2px_rgba(239,68,68,0.8)]" />
+        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-56 border-2 border-primary-foreground/90 rounded-lg pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
+        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 h-56 pointer-events-none overflow-hidden rounded-lg">
+          <div className="scanner-laser absolute left-2 right-2 h-[3px] bg-red-500 shadow-[0_0_12px_3px_rgba(239,68,68,0.9)]" />
         </div>
         {starting && !error && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-3 py-1.5 rounded-md text-xs flex items-center gap-2">
