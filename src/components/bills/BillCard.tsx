@@ -55,19 +55,19 @@ export function BillCard({ bill, onPay, onEdit, onDelete, onUnpay }: Props) {
             <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", badge.cls)}>
               {badge.label}
             </span>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(bill)}>
-                <Pencil className="h-3.5 w-3.5" />
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(bill)}>
+                <Pencil className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(bill)}>
-                <Trash2 className="h-3.5 w-3.5" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(bill)}>
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-3 flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+      <div className="mt-3 flex gap-2">
         {isPaid ? (
           <Button variant="outline" size="sm" className="flex-1" onClick={() => onUnpay(bill)}>
             <RotateCcw className="h-3.5 w-3.5" /> Desfazer baixa
