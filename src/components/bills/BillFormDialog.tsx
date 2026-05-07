@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Camera, ScanLine, Loader2 } from "lucide-react";
+import { Camera, ScanLine, Loader2, Eraser } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
 import { parseBoleto, isPixPayload, parsePix } from "@/lib/boleto";
 import { toISODate } from "@/lib/format";
@@ -88,6 +88,17 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
       setHighlightSave(false);
     }
   }, [open, editing]);
+
+  function clearForm() {
+    setDescription("");
+    setCategory("outros");
+    setAmount("");
+    setDueDate(toISODate(new Date()));
+    setRecurrence("none");
+    setBarcode("");
+    setNotes("");
+    setHighlightSave(false);
+  }
 
   function applyBarcode(raw: string) {
     // Pix Copia e Cola (QR Code)
@@ -348,7 +359,10 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
+            <Button variant="ghost" type="button" onClick={clearForm} className="sm:mr-auto">
+              <Eraser className="h-4 w-4" /> Limpar
+            </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button
               onClick={handleSave}
