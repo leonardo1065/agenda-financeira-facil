@@ -3,6 +3,7 @@ import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Button } from "@/components/ui/button";
 import { X, Camera, Keyboard, Loader2, ScanText } from "lucide-react";
+import { isValidBoletoDigits } from "@/lib/boleto";
 
 interface Props {
   open: boolean;
@@ -85,11 +86,14 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
             // Procura uma sequência numérica válida (44/47/48 dígitos) dentro do resultado
             const match = digits.match(/\d{47,48}/) || digits.match(/\d{44}/);
             const found = match ? match[0] : digits;
-            if ([44, 47, 48].includes(found.length)) {
+            if ([44, 47, 48].includes(found.length) && isValidBoletoDigits(found)) {
+              // Só aceita leituras com DVs válidos — descarta resultados
+              // corrompidos e continua tentando.
               ctrl.stop();
               onDetected(found);
               onClose();
             } else if (digits.length > 0) {
+              // Mostra parcial p/ o usuário, mas não fecha o scanner.
               setManualCode(digits);
             }
           }
@@ -151,7 +155,7 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       const text = (data?.text ?? "").replace(/[^\d\s.]/g, " ");
       const digits = text.replace(/\D/g, "");
       const match = digits.match(/\d{47,48}/) || digits.match(/\d{44}/);
-      if (match) {
+      if (match && isValidBoletoDigits(match[0])) {
         onDetected(match[0]);
         onClose();
       } else if (digits.length >= 20) {

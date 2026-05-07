@@ -89,6 +89,80 @@ export function formatBarcode(digits: string): string {
   return d;
 }
 
+// =============== Validação de DV ===============
+
+/** Mod10 (Luhn-like Febraban): pesos 2,1,2,1... da direita para a esquerda. */
+function mod10(num: string): number {
+  let sum = 0;
+  let weight = 2;
+  for (let i = num.length - 1; i >= 0; i--) {
+    let p = parseInt(num.charAt(i), 10) * weight;
+    if (p > 9) p = Math.floor(p / 10) + (p % 10);
+    sum += p;
+    weight = weight === 2 ? 1 : 2;
+  }
+  const r = sum % 10;
+  return r === 0 ? 0 : 10 - r;
+}
+
+/** Mod11 Febraban arrecadação: pesos 2..9 da direita p/ esquerda; resto 0/1/10 → DV 0. */
+function mod11Arrecadacao(num: string): number {
+  let sum = 0;
+  let weight = 2;
+  for (let i = num.length - 1; i >= 0; i--) {
+    sum += parseInt(num.charAt(i), 10) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const r = sum % 11;
+  const dv = 11 - r;
+  if (dv === 0 || dv === 10 || dv === 11) return 0;
+  return dv;
+}
+
+/**
+ * Valida uma sequência de 44/47/48 dígitos como código de barras / linha
+ * digitável de boleto bancário ou arrecadação. Retorna true só quando os
+ * dígitos verificadores batem — útil para descartar leituras corrompidas
+ * de scanner antes de aplicar.
+ */
+export function isValidBoletoDigits(input: string): boolean {
+  const d = onlyDigits(input);
+
+  // Linha digitável de arrecadação (48): 4 blocos de 11 + DV cada
+  if (d.length === 48) {
+    const valueId = d.charAt(2); // 6,7 = mod10 | 8,9 = mod11
+    const useMod10 = valueId === "6" || valueId === "7";
+    const useMod11 = valueId === "8" || valueId === "9";
+    if (!useMod10 && !useMod11) return false;
+    for (let i = 0; i < 4; i++) {
+      const block = d.substring(i * 12, i * 12 + 11);
+      const dv = parseInt(d.charAt(i * 12 + 11), 10);
+      const expected = useMod10 ? mod10(block) : mod11Arrecadacao(block);
+      if (dv !== expected) return false;
+    }
+    return true;
+  }
+
+  // Linha digitável bancária (47)
+  if (d.length === 47) {
+    // Campo 1: pos 0-9 (DV em pos 9)
+    const f1 = d.substring(0, 9);
+    if (mod10(f1) !== parseInt(d.charAt(9), 10)) return false;
+    // Campo 2: pos 10-20 (DV em pos 20)
+    const f2 = d.substring(10, 20);
+    if (mod10(f2) !== parseInt(d.charAt(20), 10)) return false;
+    // Campo 3: pos 21-31 (DV em pos 31)
+    const f3 = d.substring(21, 31);
+    if (mod10(f3) !== parseInt(d.charAt(31), 10)) return false;
+    return true;
+  }
+
+  // Código de barras puro (44) — validação leve: só checa que existem dígitos
+  if (d.length === 44) return true;
+
+  return false;
+}
+
 // =============== Pix EMV (BR Code / Copia e Cola) ===============
 
 export interface PixInfo {
