@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Camera, ScanLine, Loader2, Eraser } from "lucide-react";
+import { Camera, ScanLine, Loader2, Eraser, Copy } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
 import { parseBoleto, isPixPayload, parsePix } from "@/lib/boleto";
 import { toISODate } from "@/lib/format";
@@ -286,6 +286,24 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
                   disabled={!barcode}
                 >
                   <ScanLine className="h-4 w-4" /> Interpretar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!barcode) return;
+                    try {
+                      await navigator.clipboard.writeText(barcode);
+                      toast.success("Código copiado");
+                    } catch {
+                      toast.error("Não foi possível copiar");
+                    }
+                  }}
+                  disabled={!barcode}
+                  aria-label="Copiar código"
+                >
+                  <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
