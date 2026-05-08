@@ -14,6 +14,21 @@ function onlyDigits(s: string): string {
   return s.replace(/\D/g, "");
 }
 
+export function getBoletoDigitMessage(input: string): string {
+  const count = onlyDigits(input).length;
+  if (count === 0) return "Digite a linha digitável para conferir a quantidade.";
+  if (count === 44) return "44 dígitos — código de barras.";
+  if (count === 47) return "47 dígitos — boleto bancário.";
+  if (count === 48) return "48 dígitos — conta/concessionária.";
+
+  if (count < 44) {
+    return `${count} dígitos — faltam ${44 - count} para código de barras, ${47 - count} para boleto ou ${48 - count} para concessionária.`;
+  }
+  if (count < 47) return `${count} dígitos — faltam ${47 - count} para boleto ou ${48 - count} para concessionária.`;
+  if (count < 48) return `${count} dígitos — falta ${48 - count} para concessionária.`;
+  return `${count} dígitos — há ${count - 48} a mais.`;
+}
+
 export function parseBoleto(input: string): BoletoInfo {
   const digits = onlyDigits(input);
   const result: BoletoInfo = {
