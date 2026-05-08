@@ -3,7 +3,7 @@ import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Button } from "@/components/ui/button";
 import { X, Camera, Keyboard, Loader2, ScanText } from "lucide-react";
-import { isValidBoletoDigits } from "@/lib/boleto";
+import { getBoletoDigitMessage, isValidBoletoDigits } from "@/lib/boleto";
 
 interface Props {
   open: boolean;
@@ -217,6 +217,7 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value.replace(/\D/g, ""))}
             inputMode="numeric"
+            maxLength={48}
             placeholder="Digite ou complete o código"
             className="min-w-0 flex-1 rounded-md border border-primary-foreground/20 bg-background/95 px-3 py-2 text-sm text-foreground outline-none"
           />
@@ -224,6 +225,7 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
             <Keyboard className="h-4 w-4" /> Usar
           </Button>
         </div>
+        <p className="text-xs text-primary-foreground/70">{getBoletoDigitMessage(manualCode)}</p>
       </div>
     </div>
   );
