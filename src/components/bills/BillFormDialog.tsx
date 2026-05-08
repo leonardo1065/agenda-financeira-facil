@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Camera, ScanLine, Loader2, Eraser, Copy } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
-import { parseBoleto, isPixPayload, parsePix } from "@/lib/boleto";
+import { parseBoleto, isPixPayload, parsePix, getBoletoDigitMessage } from "@/lib/boleto";
 import { toISODate } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -101,6 +101,7 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   }
 
   function applyBarcode(raw: string) {
+    const normalizedRaw = raw.replace(/[\s.\-/]/g, "");
     // Pix Copia e Cola (QR Code)
     if (isPixPayload(raw)) {
       const pix = parsePix(raw);
@@ -136,12 +137,12 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
       }
     }
 
-    const info = parseBoleto(raw);
+    const info = parseBoleto(normalizedRaw);
     setBarcode(info.barcode);
 
     if (info.type === "desconhecido") {
       toast.warning("Código não reconhecido", {
-        description: `Foram lidos ${info.barcode.length} dígitos. Linha digitável precisa ter 47 (boleto) ou 48 (concessionária).`,
+        description: getBoletoDigitMessage(normalizedRaw),
       });
       return;
     }
@@ -263,10 +264,11 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
               <Textarea
                 placeholder="Cole aqui a linha digitável (47 ou 48 dígitos)…"
                 value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
+                onChange={(e) => setBarcode(e.target.value.replace(/\D/g, ""))}
                 rows={2}
                 className="font-mono text-xs"
               />
+              <p className="text-xs text-muted-foreground">{getBoletoDigitMessage(barcode)}</p>
               <div className="flex gap-2">
                 <Button
                   type="button"
