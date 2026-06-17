@@ -79,6 +79,12 @@ function LoginPage() {
           </Button>
         </form>
 
+        <div className="mt-3 text-center">
+          <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-primary hover:underline">
+            Esqueci minha senha
+          </Link>
+        </div>
+
         <p className="mt-6 text-xs text-muted-foreground text-center">
           Ainda não tem acesso?{" "}
           <Link to="/signup" className="font-medium text-primary hover:underline">
