@@ -195,13 +195,17 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       const canvas = document.createElement("canvas");
       const w = video.videoWidth;
       const h = video.videoHeight;
+      // Recorta uma faixa horizontal central (onde fica o retângulo do scanner)
+      // — OCR fica muito mais rápido e preciso na linha digitável.
+      const cropH = Math.round(h * 0.32);
+      const cropY = Math.round((h - cropH) / 2);
       canvas.width = w;
-      canvas.height = h;
+      canvas.height = cropH;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas indisponível");
-      ctx.drawImage(video, 0, 0, w, h);
+      ctx.drawImage(video, 0, cropY, w, cropH, 0, 0, w, cropH);
       // Pré-processamento: escala de cinza + contraste
-      const img = ctx.getImageData(0, 0, w, h);
+      const img = ctx.getImageData(0, 0, w, cropH);
       const d = img.data;
       for (let i = 0; i < d.length; i += 4) {
         const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
@@ -213,6 +217,8 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       const Tesseract = (await import("tesseract.js")).default;
       const { data } = await Tesseract.recognize(canvas, "eng", {
         // Restringe a dígitos e separadores típicos da linha digitável
+        tessedit_char_whitelist: "0123456789 .-",
+        preserve_interword_spaces: "1",
       } as never);
       const text = (data?.text ?? "").replace(/[^\d\s.]/g, " ");
       const digits = text.replace(/\D/g, "");
