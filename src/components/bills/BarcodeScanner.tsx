@@ -21,6 +21,7 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
   const [ocrRunning, setOcrRunning] = useState(false);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const detectorLoopRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -61,7 +62,11 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
         if (!stream) {
           try {
             stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: { ideal: "environment" } },
+              video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+              },
               audio: false,
             });
           } catch {
@@ -78,6 +83,59 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
         if (!video) return;
         video.srcObject = stream;
         await video.play().catch(() => {});
+
+        // Tenta ativar foco contínuo e torch off (melhora muito o ITF do boleto)
+        try {
+          const track = stream.getVideoTracks()[0];
+          const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & {
+            focusMode?: string[];
+          };
+          const advanced: MediaTrackConstraintSet[] = [];
+          if (caps.focusMode?.includes("continuous")) {
+            (advanced as Array<Record<string, unknown>>).push({ focusMode: "continuous" });
+          }
+          if (advanced.length) await track.applyConstraints({ advanced });
+        } catch {
+          // ignora — nem todo dispositivo suporta
+        }
+
+        // Caminho 1 (preferido): BarcodeDetector nativo — muito mais preciso para ITF de boleto
+        const NativeDetector = (window as unknown as {
+          BarcodeDetector?: new (opts?: { formats?: string[] }) => {
+            detect: (src: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
+          };
+        }).BarcodeDetector;
+        if (NativeDetector) {
+          try {
+            const detector = new NativeDetector({ formats: ["itf", "code_128", "qr_code", "pdf417"] });
+            const tick = async () => {
+              if (cancelled) return;
+              try {
+                const results = await detector.detect(video);
+                for (const r of results) {
+                  const digits = (r.rawValue || "").replace(/\D/g, "");
+                  const match = digits.match(/\d{47,48}/) || digits.match(/\d{44}/);
+                  const found = match ? match[0] : digits;
+                  if ([44, 47, 48].includes(found.length) && isValidBoletoDigits(found)) {
+                    onDetected(found);
+                    onClose();
+                    return;
+                  } else if (digits.length > 0) {
+                    setManualCode(digits.slice(0, 48));
+                  }
+                }
+              } catch {
+                // segue o loop
+              }
+              detectorLoopRef.current = window.setTimeout(tick, 120) as unknown as number;
+            };
+            tick();
+            setStarting(false);
+            return;
+          } catch {
+            // cai para ZXing
+          }
+        }
 
         const controls = await reader.decodeFromStream(stream, video, (result, _err, ctrl) => {
           if (result) {
@@ -116,6 +174,10 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
 
     return () => {
       cancelled = true;
+      if (detectorLoopRef.current != null) {
+        clearTimeout(detectorLoopRef.current);
+        detectorLoopRef.current = null;
+      }
       controlsRef.current?.stop();
       controlsRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
