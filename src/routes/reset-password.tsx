@@ -20,6 +20,41 @@ function ResetPasswordPage() {
 
   useEffect(() => {
     let cancelled = false;
+
+    async function consumeUrl() {
+      if (typeof window === "undefined") return;
+      try {
+        // Fluxo PKCE: ?code=...
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!cancelled && !error) {
+            setReady(true);
+            url.searchParams.delete("code");
+            window.history.replaceState({}, "", url.pathname + url.search);
+            return;
+          }
+        }
+        // Fluxo implícito: #access_token=...&refresh_token=...&type=recovery
+        if (window.location.hash.includes("access_token")) {
+          const hash = new URLSearchParams(window.location.hash.slice(1));
+          const access_token = hash.get("access_token");
+          const refresh_token = hash.get("refresh_token");
+          if (access_token && refresh_token) {
+            const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+            if (!cancelled && !error) {
+              setReady(true);
+              window.history.replaceState({}, "", window.location.pathname);
+              return;
+            }
+          }
+        }
+      } catch {
+        // ignora — listeners abaixo podem cobrir
+      }
+    }
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || session) {
         setReady(true);
@@ -29,13 +64,9 @@ function ResetPasswordPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (!cancelled && data.session) setReady(true);
     });
-    // Fallback: libera o formulário após 1.5s mesmo sem evento detectado
-    const t = setTimeout(() => {
-      if (!cancelled) setReady(true);
-    }, 1500);
+    consumeUrl();
     return () => {
       cancelled = true;
-      clearTimeout(t);
       sub.subscription.unsubscribe();
     };
   }, []);
