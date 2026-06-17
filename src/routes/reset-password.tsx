@@ -19,17 +19,25 @@ function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Supabase entrega o token de recovery e dispara PASSWORD_RECOVERY
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+    let cancelled = false;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || session) {
         setReady(true);
       }
     });
-    // Caso o evento já tenha disparado antes de montarmos o listener
+    // Caso já exista sessão (link já validado pelo Supabase)
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
+      if (!cancelled && data.session) setReady(true);
     });
-    return () => sub.subscription.unsubscribe();
+    // Fallback: libera o formulário após 1.5s mesmo sem evento detectado
+    const t = setTimeout(() => {
+      if (!cancelled) setReady(true);
+    }, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   async function handleSubmit(e: FormEvent) {
