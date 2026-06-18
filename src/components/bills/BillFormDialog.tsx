@@ -33,6 +33,7 @@ interface Props {
   editing?: Bill | null;
 }
 
+
 export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("outros");
