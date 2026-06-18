@@ -1,13 +1,25 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Camera, ScanLine, Loader2, Eraser, Copy } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
-import { parseBoleto, isPixPayload, parsePix, getBoletoDigitMessage } from "@/lib/boleto";
+import { parseBoleto, extractPixPayload, parsePix, getBoletoDigitMessage } from "@/lib/boleto";
 import { toISODate } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,12 +44,19 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [highlightSave, setHighlightSave] = useState(false);
-  const [pendingStreamRequest, setPendingStreamRequest] = useState<Promise<MediaStream> | null>(null);
+  const [pendingStreamRequest, setPendingStreamRequest] = useState<Promise<MediaStream> | null>(
+    null,
+  );
+  const codeMessage = extractPixPayload(barcode)
+    ? "Pix copia e cola detectado."
+    : getBoletoDigitMessage(barcode);
 
   async function openScanner() {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
-        toast.error("Câmera não suportada", { description: "Use Chrome/Safari atualizado em HTTPS." });
+        toast.error("Câmera não suportada", {
+          description: "Use Chrome/Safari atualizado em HTTPS.",
+        });
         return;
       }
       // A chamada de permissão acontece diretamente neste clique; o scanner apenas aguarda essa promessa.
@@ -53,8 +72,9 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
     } catch (e) {
       const err = e as DOMException;
       let msg = err.message || "Erro ao acessar câmera";
-      if (err.name === "NotAllowedError") msg = "Permissão negada. Habilite a câmera nas configurações do navegador.";
-      else if (err.name === "NotFoundError") msg = "Nenhuma câmera encontrada.";
+      if (err.name === "NotAllowedError") {
+        msg = "Permissão negada. Habilite a câmera nas configurações do navegador.";
+      } else if (err.name === "NotFoundError") msg = "Nenhuma câmera encontrada.";
       else if (location.protocol !== "https:" && location.hostname !== "localhost") {
         msg = "A câmera só funciona em HTTPS.";
       }
@@ -103,8 +123,9 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
   function applyBarcode(raw: string) {
     const normalizedRaw = raw.replace(/[\s.\-/]/g, "");
     // Pix Copia e Cola (QR Code)
-    if (isPixPayload(raw)) {
-      const pix = parsePix(raw);
+    const pixPayload = extractPixPayload(raw);
+    if (pixPayload) {
+      const pix = parsePix(pixPayload);
       if (pix) {
         setBarcode(pix.payload);
         setCategory((c) => (c === "outros" ? "boleto" : c));
@@ -192,15 +213,18 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
     setSaving(true);
     try {
       if (editing) {
-        const { error } = await supabase.from("bills").update({
-          description: description.trim(),
-          category,
-          amount: numAmount,
-          due_date: dueDate,
-          recurrence,
-          barcode: barcode || null,
-          notes: notes.trim() || null,
-        }).eq("id", editing.id);
+        const { error } = await supabase
+          .from("bills")
+          .update({
+            description: description.trim(),
+            category,
+            amount: numAmount,
+            due_date: dueDate,
+            recurrence,
+            barcode: barcode || null,
+            notes: notes.trim() || null,
+          })
+          .eq("id", editing.id);
         if (error) throw error;
         toast.success("Conta atualizada");
       } else {
@@ -262,13 +286,13 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
                 Linha digitável / código de barras
               </Label>
               <Textarea
-                placeholder="Cole aqui a linha digitável (47 ou 48 dígitos)…"
+                placeholder="Cole a linha digitável, código de barras ou Pix copia e cola…"
                 value={barcode}
-                onChange={(e) => setBarcode(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => setBarcode(e.target.value)}
                 rows={2}
                 className="font-mono text-xs"
               />
-              <p className="text-xs text-muted-foreground">{getBoletoDigitMessage(barcode)}</p>
+              <p className="text-xs text-muted-foreground">{codeMessage}</p>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -346,10 +370,14 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
               <div className="space-y-2">
                 <Label>Categoria</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map((c) => (
-                      <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -357,7 +385,9 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
               <div className="space-y-2">
                 <Label>Recorrência</Label>
                 <Select value={recurrence} onValueChange={setRecurrence}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhuma</SelectItem>
                     <SelectItem value="monthly">Mensal</SelectItem>
@@ -383,7 +413,9 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
             <Button variant="ghost" type="button" onClick={clearForm} className="sm:mr-auto">
               <Eraser className="h-4 w-4" /> Limpar
             </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button
               onClick={handleSave}
               disabled={saving}

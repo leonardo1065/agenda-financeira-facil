@@ -24,7 +24,9 @@ export function getBoletoDigitMessage(input: string): string {
   if (count < 44) {
     return `${count} dígitos — faltam ${44 - count} para código de barras, ${47 - count} para boleto ou ${48 - count} para concessionária.`;
   }
-  if (count < 47) return `${count} dígitos — faltam ${47 - count} para boleto ou ${48 - count} para concessionária.`;
+  if (count < 47) {
+    return `${count} dígitos — faltam ${47 - count} para boleto ou ${48 - count} para concessionária.`;
+  }
   if (count < 48) return `${count} dígitos — falta ${48 - count} para concessionária.`;
   return `${count} dígitos — há ${count - 48} a mais.`;
 }
@@ -80,6 +82,16 @@ export function parseBoleto(input: string): BoletoInfo {
 
   if (digits.length === 44) {
     // Código de barras puro
+    if (digits.startsWith("8")) {
+      result.type = "arrecadacao";
+      const valorIdentifier = digits.charAt(2); // 6,7 = efetivo | 8,9 = referência
+      const valor = parseInt(digits.substring(4, 15), 10);
+      if (!isNaN(valor) && (valorIdentifier === "6" || valorIdentifier === "7")) {
+        result.amount = valor / 100;
+      }
+      return result;
+    }
+
     result.type = "bancario";
     const fator = parseInt(digits.substring(5, 9), 10);
     const valor = parseInt(digits.substring(9, 19), 10);
@@ -96,10 +108,10 @@ export function parseBoleto(input: string): BoletoInfo {
 export function formatBarcode(digits: string): string {
   const d = onlyDigits(digits);
   if (d.length === 47) {
-    return `${d.slice(0,5)}.${d.slice(5,10)} ${d.slice(10,15)}.${d.slice(15,21)} ${d.slice(21,26)}.${d.slice(26,32)} ${d.slice(32,33)} ${d.slice(33,47)}`;
+    return `${d.slice(0, 5)}.${d.slice(5, 10)} ${d.slice(10, 15)}.${d.slice(15, 21)} ${d.slice(21, 26)}.${d.slice(26, 32)} ${d.slice(32, 33)} ${d.slice(33, 47)}`;
   }
   if (d.length === 48) {
-    return `${d.slice(0,11)}-${d.slice(11,12)} ${d.slice(12,23)}-${d.slice(23,24)} ${d.slice(24,35)}-${d.slice(35,36)} ${d.slice(36,47)}-${d.slice(47,48)}`;
+    return `${d.slice(0, 11)}-${d.slice(11, 12)} ${d.slice(12, 23)}-${d.slice(23, 24)} ${d.slice(24, 35)}-${d.slice(35, 36)} ${d.slice(36, 47)}-${d.slice(47, 48)}`;
   }
   return d;
 }
@@ -131,6 +143,20 @@ function mod11Arrecadacao(num: string): number {
   const r = sum % 11;
   const dv = 11 - r;
   if (dv === 0 || dv === 10 || dv === 11) return 0;
+  return dv;
+}
+
+/** Mod11 boleto bancário: pesos 2..9 da direita; resto 0/1/10 → DV 1. */
+function mod11Bancario(num: string): number {
+  let sum = 0;
+  let weight = 2;
+  for (let i = num.length - 1; i >= 0; i--) {
+    sum += parseInt(num.charAt(i), 10) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  const r = sum % 11;
+  const dv = 11 - r;
+  if (dv === 0 || dv === 10 || dv === 11) return 1;
   return dv;
 }
 
@@ -172,8 +198,21 @@ export function isValidBoletoDigits(input: string): boolean {
     return true;
   }
 
-  // Código de barras puro (44) — validação leve: só checa que existem dígitos
-  if (d.length === 44) return true;
+  // Código de barras puro (44)
+  if (d.length === 44) {
+    if (d.startsWith("8")) {
+      const valueId = d.charAt(2); // 6,7 = mod10 | 8,9 = mod11
+      const useMod10 = valueId === "6" || valueId === "7";
+      const useMod11 = valueId === "8" || valueId === "9";
+      if (!useMod10 && !useMod11) return false;
+      const withoutGeneralDv = d.slice(0, 3) + d.slice(4);
+      const expected = useMod10 ? mod10(withoutGeneralDv) : mod11Arrecadacao(withoutGeneralDv);
+      return expected === parseInt(d.charAt(3), 10);
+    }
+
+    const withoutGeneralDv = d.slice(0, 4) + d.slice(5);
+    return mod11Bancario(withoutGeneralDv) === parseInt(d.charAt(4), 10);
+  }
 
   return false;
 }
@@ -189,15 +228,38 @@ export interface PixInfo {
   txid: string | null;
 }
 
-/** Detecta payload Pix EMV. Começa com "000201" e contém "br.gov.bcb.pix". */
+function decodeSafe(text: string): string {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
+/** Detecta payload Pix EMV direto. Começa com "000201" e contém "br.gov.bcb.pix". */
 export function isPixPayload(text: string): boolean {
   const t = text.trim();
   return /^000201/.test(t) && /br\.gov\.bcb\.pix/i.test(t);
 }
 
+/** Extrai Pix EMV mesmo quando o QR vem dentro de URL/query string. */
+export function extractPixPayload(input: string): string | null {
+  const trimmed = input.trim();
+  const variants = [decodeSafe(trimmed), trimmed];
+  for (const variant of variants) {
+    if (isPixPayload(variant)) return variant;
+    const start = variant.indexOf("000201");
+    if (start >= 0) {
+      const candidate = variant.slice(start).trim();
+      if (isPixPayload(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
 /** Faz parse simples do TLV EMV do Pix. */
 export function parsePix(input: string): PixInfo | null {
-  const text = input.trim();
+  const text = extractPixPayload(input) ?? input.trim();
   if (!isPixPayload(text)) return null;
 
   const tlv: Record<string, string> = {};

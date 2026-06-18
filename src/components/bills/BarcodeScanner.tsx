@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Button } from "@/components/ui/button";
 import { X, Camera, Keyboard, Loader2, ScanText } from "lucide-react";
-import { getBoletoDigitMessage, isValidBoletoDigits } from "@/lib/boleto";
+import { extractPixPayload, getBoletoDigitMessage, isValidBoletoDigits } from "@/lib/boleto";
 
 interface Props {
   open: boolean;
@@ -15,6 +15,7 @@ interface Props {
 
 export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const detectedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [starting, setStarting] = useState(false);
@@ -22,9 +23,90 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectorLoopRef = useRef<number | null>(null);
+  const zxingFrameLoopRef = useRef<number | null>(null);
+
+  const findReadableCode = useCallback((raw: string): string | null => {
+    const clean = raw.trim();
+    if (!clean) return null;
+    const pix = extractPixPayload(clean);
+    if (pix) return pix;
+
+    const digits = clean.replace(/\D/g, "");
+    const candidates = [
+      digits.match(/\d{48}/)?.[0],
+      digits.match(/\d{47}/)?.[0],
+      digits.match(/\d{44}/)?.[0],
+    ].filter(Boolean) as string[];
+    for (const candidate of candidates) {
+      if (isValidBoletoDigits(candidate)) return candidate;
+    }
+    if (digits.length > 0) setManualCode(digits.slice(0, 48));
+    return null;
+  }, []);
+
+  const acceptIfReadable = useCallback(
+    (raw: string): boolean => {
+      if (detectedRef.current) return true;
+      const code = findReadableCode(raw);
+      if (!code) return false;
+      detectedRef.current = true;
+      onDetected(code);
+      onClose();
+      return true;
+    },
+    [findReadableCode, onClose, onDetected],
+  );
+
+  const startEnhancedFrameScan = useCallback(
+    (reader: BrowserMultiFormatReader, video: HTMLVideoElement, isCancelled: () => boolean) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
+
+      const scan = () => {
+        if (isCancelled() || detectedRef.current) return;
+        if (video.readyState < 2) {
+          zxingFrameLoopRef.current = window.setTimeout(scan, 220) as unknown as number;
+          return;
+        }
+        try {
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          if (vw && vh) {
+            const crops = [
+              { x: 0, y: 0, w: vw, h: vh },
+              { x: 0, y: Math.round(vh * 0.25), w: vw, h: Math.round(vh * 0.5) },
+              {
+                x: Math.round(vw * 0.05),
+                y: Math.round(vh * 0.35),
+                w: Math.round(vw * 0.9),
+                h: Math.round(vh * 0.3),
+              },
+            ];
+
+            for (const crop of crops) {
+              canvas.width = crop.w;
+              canvas.height = crop.h;
+              ctx.drawImage(video, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
+              try {
+                if (acceptIfReadable(reader.decodeFromCanvas(canvas).getText())) return;
+              } catch {
+                // tenta próximo recorte
+              }
+            }
+          }
+        } finally {
+          zxingFrameLoopRef.current = window.setTimeout(scan, 220) as unknown as number;
+        }
+      };
+      scan();
+    },
+    [acceptIfReadable],
+  );
 
   useEffect(() => {
     if (!open) return;
+    detectedRef.current = false;
     setError(null);
     setStarting(true);
 
@@ -32,13 +114,7 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
       BarcodeFormat.ITF,
       BarcodeFormat.CODE_128,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.CODE_93,
-      BarcodeFormat.CODABAR,
       BarcodeFormat.QR_CODE,
-      BarcodeFormat.DATA_MATRIX,
       BarcodeFormat.PDF_417,
     ]);
     hints.set(DecodeHintType.TRY_HARDER, true);
@@ -55,7 +131,9 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error("Seu navegador não suporta câmera. Use Chrome/Safari atualizado em HTTPS.");
+          throw new Error(
+            "Seu navegador não suporta câmera. Use Chrome/Safari atualizado em HTTPS.",
+          );
         }
         // Aguarda a solicitação iniciada no clique (preserva gesto do usuário) ou solicita agora
         let stream = initialStreamRequest ? await initialStreamRequest : null;
@@ -84,6 +162,8 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
         video.srcObject = stream;
         await video.play().catch(() => {});
 
+        startEnhancedFrameScan(reader, video, () => cancelled);
+
         // Tenta ativar foco contínuo e torch off (melhora muito o ITF do boleto)
         try {
           const track = stream.getVideoTracks()[0];
@@ -99,30 +179,25 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
           // ignora — nem todo dispositivo suporta
         }
 
-        // Caminho 1 (preferido): BarcodeDetector nativo — muito mais preciso para ITF de boleto
-        const NativeDetector = (window as unknown as {
-          BarcodeDetector?: new (opts?: { formats?: string[] }) => {
-            detect: (src: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
-          };
-        }).BarcodeDetector;
+        // Caminho 1: BarcodeDetector nativo — ótimo para QR Code/Pix e, em alguns aparelhos, ITF.
+        const NativeDetector = (
+          window as unknown as {
+            BarcodeDetector?: new (opts?: { formats?: string[] }) => {
+              detect: (src: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
+            };
+          }
+        ).BarcodeDetector;
         if (NativeDetector) {
           try {
-            const detector = new NativeDetector({ formats: ["itf", "code_128", "qr_code", "pdf417"] });
+            const detector = new NativeDetector({
+              formats: ["itf", "code_128", "qr_code", "pdf417"],
+            });
             const tick = async () => {
               if (cancelled) return;
               try {
                 const results = await detector.detect(video);
                 for (const r of results) {
-                  const digits = (r.rawValue || "").replace(/\D/g, "");
-                  const match = digits.match(/\d{47,48}/) || digits.match(/\d{44}/);
-                  const found = match ? match[0] : digits;
-                  if ([44, 47, 48].includes(found.length) && isValidBoletoDigits(found)) {
-                    onDetected(found);
-                    onClose();
-                    return;
-                  } else if (digits.length > 0) {
-                    setManualCode(digits.slice(0, 48));
-                  }
+                  if (acceptIfReadable(r.rawValue || "")) return;
                 }
               } catch {
                 // segue o loop
@@ -130,8 +205,6 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
               detectorLoopRef.current = window.setTimeout(tick, 120) as unknown as number;
             };
             tick();
-            setStarting(false);
-            return;
           } catch {
             // cai para ZXing
           }
@@ -139,20 +212,10 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
 
         const controls = await reader.decodeFromStream(stream, video, (result, _err, ctrl) => {
           if (result) {
-            const raw = result.getText();
-            const digits = raw.replace(/\D/g, "");
-            // Procura uma sequência numérica válida (44/47/48 dígitos) dentro do resultado
-            const match = digits.match(/\d{47,48}/) || digits.match(/\d{44}/);
-            const found = match ? match[0] : digits;
-            if ([44, 47, 48].includes(found.length) && isValidBoletoDigits(found)) {
+            if (acceptIfReadable(result.getText())) {
               // Só aceita leituras com DVs válidos — descarta resultados
               // corrompidos e continua tentando.
               ctrl.stop();
-              onDetected(found);
-              onClose();
-            } else if (digits.length > 0) {
-              // Mostra parcial p/ o usuário, mas não fecha o scanner.
-              setManualCode(digits);
             }
           }
         });
@@ -161,8 +224,9 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
       } catch (e) {
         const err = e as DOMException | Error;
         let msg = err.message || "Erro ao acessar a câmera";
-        if (err.name === "NotAllowedError") msg = "Permissão de câmera negada. Habilite nas configurações do navegador.";
-        else if (err.name === "NotFoundError") msg = "Nenhuma câmera encontrada no dispositivo.";
+        if (err.name === "NotAllowedError") {
+          msg = "Permissão de câmera negada. Habilite nas configurações do navegador.";
+        } else if (err.name === "NotFoundError") msg = "Nenhuma câmera encontrada no dispositivo.";
         else if (err.name === "NotReadableError") msg = "Câmera em uso por outro aplicativo.";
         else if (location.protocol !== "https:" && location.hostname !== "localhost") {
           msg = "A câmera só funciona em HTTPS. Abra o app em https://";
@@ -178,12 +242,16 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
         clearTimeout(detectorLoopRef.current);
         detectorLoopRef.current = null;
       }
+      if (zxingFrameLoopRef.current != null) {
+        clearTimeout(zxingFrameLoopRef.current);
+        zxingFrameLoopRef.current = null;
+      }
       controlsRef.current?.stop();
       controlsRef.current = null;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [open, onClose, onDetected, initialStreamRequest]);
+  }, [open, onClose, onDetected, initialStreamRequest, acceptIfReadable, startEnhancedFrameScan]);
 
   if (!open) return null;
 
@@ -269,7 +337,10 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
         )}
       </div>
       <div className="space-y-3 p-4 text-primary-foreground/80 text-sm text-center">
-        <p>Aproxime, mantenha o boleto reto. Se o código não for detectado, toque em "Ler com OCR" para tentar via texto.</p>
+        <p>
+          Aproxime, mantenha o boleto reto. Se o código não for detectado, toque em "Ler com OCR"
+          para tentar via texto.
+        </p>
         <Button
           type="button"
           variant="secondary"
@@ -277,7 +348,11 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
           onClick={runOcr}
           disabled={ocrRunning || starting}
         >
-          {ocrRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
+          {ocrRunning ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ScanText className="h-4 w-4" />
+          )}
           {ocrRunning ? "Lendo texto…" : "Ler linha digitável (OCR)"}
         </Button>
         <div className="flex gap-2">
@@ -289,7 +364,12 @@ export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest
             placeholder="Digite ou complete o código"
             className="min-w-0 flex-1 rounded-md border border-primary-foreground/20 bg-background/95 px-3 py-2 text-sm text-foreground outline-none"
           />
-          <Button type="button" variant="secondary" onClick={() => manualCode && onDetected(manualCode)} disabled={!manualCode}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => manualCode && onDetected(manualCode)}
+            disabled={!manualCode}
+          >
             <Keyboard className="h-4 w-4" /> Usar
           </Button>
         </div>
