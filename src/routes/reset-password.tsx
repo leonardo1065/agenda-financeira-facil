@@ -65,8 +65,8 @@ function ResetPasswordPage() {
         }
 
         // Fluxo com token_hash em templates de e-mail personalizados.
-        const tokenHash = url.searchParams.get("token_hash");
-        const type = url.searchParams.get("type");
+        const tokenHash = url.searchParams.get("token_hash") ?? hash.get("token_hash");
+        const type = url.searchParams.get("type") ?? hash.get("type");
         if (tokenHash && type === "recovery") {
           const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
           if (!cancelled) {
