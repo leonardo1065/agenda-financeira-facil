@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { Wallet, Loader2 } from "lucide-react";
+import { Wallet, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,52 +17,97 @@ function ResetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [ready, setReady] = useState(false);
+  const [done, setDone] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
+    function finishReady() {
+      if (!cancelled) {
+        setLinkError(null);
+        setReady(true);
+      }
+    }
+
+    function finishInvalid(message = "O link expirou ou já foi usado. Solicite um novo link.") {
+      if (!cancelled) {
+        setReady(false);
+        setLinkError(message);
+      }
+    }
+
     async function consumeUrl() {
       if (typeof window === "undefined") return;
       try {
-        // Fluxo PKCE: ?code=...
         const url = new URL(window.location.href);
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        const authError = url.searchParams.get("error_description") || hash.get("error_description");
+        if (authError) {
+          finishInvalid(decodeURIComponent(authError.replace(/\+/g, " ")));
+          return;
+        }
+
+        // Fluxo PKCE: ?code=...
         const code = url.searchParams.get("code");
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (!cancelled && !error) {
-            setReady(true);
+          if (!cancelled) {
+            if (error) {
+              finishInvalid(error.message);
+              return;
+            }
             url.searchParams.delete("code");
             window.history.replaceState({}, "", url.pathname + url.search);
-            return;
+            finishReady();
           }
+          return;
         }
+
+        // Fluxo com token_hash em templates de e-mail personalizados.
+        const tokenHash = url.searchParams.get("token_hash");
+        const type = url.searchParams.get("type");
+        if (tokenHash && type === "recovery") {
+          const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+          if (!cancelled) {
+            if (error) {
+              finishInvalid(error.message);
+              return;
+            }
+            window.history.replaceState({}, "", window.location.pathname);
+            finishReady();
+          }
+          return;
+        }
+
         // Fluxo implícito: #access_token=...&refresh_token=...&type=recovery
         if (window.location.hash.includes("access_token")) {
-          const hash = new URLSearchParams(window.location.hash.slice(1));
           const access_token = hash.get("access_token");
           const refresh_token = hash.get("refresh_token");
           if (access_token && refresh_token) {
             const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-            if (!cancelled && !error) {
-              setReady(true);
+            if (!cancelled) {
+              if (error) {
+                finishInvalid(error.message);
+                return;
+              }
               window.history.replaceState({}, "", window.location.pathname);
-              return;
+              finishReady();
             }
+            return;
           }
         }
+
+        finishInvalid();
       } catch {
-        // ignora — listeners abaixo podem cobrir
+        finishInvalid();
       }
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || session) {
-        setReady(true);
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        finishReady();
       }
-    });
-    // Caso já exista sessão (link já validado pelo Supabase)
-    supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled && data.session) setReady(true);
     });
     consumeUrl();
     return () => {
@@ -82,6 +127,13 @@ function ResetPasswordPage() {
       return;
     }
     setSubmitting(true);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData.user) {
+      setSubmitting(false);
+      setReady(false);
+      setLinkError("Sua sessão de redefinição expirou. Solicite um novo link.");
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password });
     setSubmitting(false);
     if (error) {
@@ -89,7 +141,8 @@ function ResetPasswordPage() {
       return;
     }
     toast.success("Senha atualizada");
-    navigate({ to: "/" });
+    setDone(true);
+    await supabase.auth.signOut();
   }
 
   return (
@@ -108,7 +161,26 @@ function ResetPasswordPage() {
           </div>
         </div>
 
-        {!ready ? (
+        {done ? (
+          <div className="space-y-4 text-sm">
+            <div className="flex items-center gap-2 text-success">
+              <CheckCircle2 className="h-4 w-4" /> Senha atualizada com sucesso.
+            </div>
+            <Button className="w-full" onClick={() => navigate({ to: "/login", replace: true })}>
+              Entrar com a nova senha
+            </Button>
+          </div>
+        ) : linkError ? (
+          <div className="space-y-4 text-sm">
+            <div className="flex items-start gap-2 text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{linkError}</p>
+            </div>
+            <Button variant="outline" className="w-full" onClick={() => navigate({ to: "/forgot-password", replace: true })}>
+              <ArrowLeft className="h-4 w-4" /> Enviar novo link
+            </Button>
+          </div>
+        ) : !ready ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Validando link…
           </div>
