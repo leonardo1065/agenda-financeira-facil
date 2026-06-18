@@ -13,7 +13,6 @@ interface Props {
   initialStreamRequest?: Promise<MediaStream> | null;
 }
 
-
 export function BarcodeScanner({ open, onClose, onDetected, initialStreamRequest }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const detectedRef = useRef(false);

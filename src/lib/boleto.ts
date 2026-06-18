@@ -8,7 +8,6 @@ export interface BoletoInfo {
   type: "bancario" | "arrecadacao" | "desconhecido";
 }
 
-
 const BASE_DATE = new Date(Date.UTC(1997, 9, 7)); // 07/10/1997
 
 function onlyDigits(s: string): string {
