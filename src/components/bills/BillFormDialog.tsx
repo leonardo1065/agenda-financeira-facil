@@ -20,7 +20,7 @@ import {
 import { Camera, ScanLine, Loader2, Eraser, Copy } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
 import { parseBoleto, extractPixPayload, parsePix, getBoletoDigitMessage } from "@/lib/boleto";
-import { toISODate } from "@/lib/format";
+import { toISODate, parseCurrency } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarcodeScanner } from "./BarcodeScanner";
@@ -209,7 +209,7 @@ export function BillFormDialog({ open, onOpenChange, onSaved, editing }: Props) 
       toast.error("Informe a descrição");
       return;
     }
-    const numAmount = parseFloat(amount.replace(/\./g, "").replace(",", ".")) || 0;
+    const numAmount = parseCurrency(amount);
     setSaving(true);
     try {
       if (editing) {
