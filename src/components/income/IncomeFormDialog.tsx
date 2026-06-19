@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toISODate } from "@/lib/format";
+import { toISODate, parseCurrency } from "@/lib/format";
 import { toast } from "sonner";
 import type { IncomeEntry } from "./types";
 
@@ -50,7 +50,7 @@ export function IncomeFormDialog({ open, onOpenChange, onSaved, editing }: Props
 
   async function handleSave() {
     if (!description.trim()) return toast.error("Informe a descrição da receita");
-    const numAmount = parseFloat(amount.replace(/\./g, "").replace(",", ".")) || 0;
+    const numAmount = parseCurrency(amount);
     setSaving(true);
     try {
       if (editing) {
