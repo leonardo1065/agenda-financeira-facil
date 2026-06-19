@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { toISODate } from "@/lib/format";
+import { toISODate, parseCurrency } from "@/lib/format";
 import type { Bill } from "./types";
 
 interface Props {
@@ -27,7 +27,7 @@ export function PayDialog({ bill, onClose, onSaved }: Props) {
 
   async function confirm() {
     if (!bill) return;
-    const v = parseFloat(paidAmount.replace(/\./g, "").replace(",", ".")) || 0;
+    const v = parseCurrency(paidAmount);
     const { error } = await supabase
       .from("bills")
       .update({ status: "paid", paid_date: paidDate, paid_amount: v })
