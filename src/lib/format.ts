@@ -7,9 +7,37 @@ export function formatCurrency(value: number | null | undefined): string {
 }
 
 export function parseCurrency(input: string): number {
-  const cleaned = input.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? 0 : n;
+  let s = String(input ?? "").replace(/[^\d,.-]/g, "");
+  if (!s) return 0;
+  const neg = s.startsWith("-");
+  s = s.replace(/-/g, "");
+  const hasDot = s.includes(".");
+  const hasComma = s.includes(",");
+  let normalized = s;
+  if (hasDot && hasComma) {
+    // Último separador é o decimal
+    const lastDot = s.lastIndexOf(".");
+    const lastComma = s.lastIndexOf(",");
+    if (lastComma > lastDot) {
+      normalized = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      normalized = s.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    // Vírgula é decimal (pt-BR)
+    normalized = s.replace(/\./g, "").replace(",", ".");
+  } else if (hasDot) {
+    // Só ponto: se houver mais de um ou 3 dígitos após o último, é separador de milhar
+    const parts = s.split(".");
+    const last = parts[parts.length - 1];
+    if (parts.length > 2 || last.length === 3) {
+      normalized = s.replace(/\./g, "");
+    }
+    // caso contrário, mantém como decimal (ex.: "90.00")
+  }
+  const n = parseFloat(normalized);
+  if (isNaN(n)) return 0;
+  return neg ? -n : n;
 }
 
 export function formatDateBR(date: string | Date | null | undefined): string {
