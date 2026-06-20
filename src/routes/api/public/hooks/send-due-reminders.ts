@@ -101,12 +101,19 @@ async function handler() {
         sections.push(`${categoryEmoji(b.category)} ${categoryLabel(b.category)} — ${b.description}: ${formatBRL(Number(b.amount))} (${formatDateBR(b.due_date)})`);
       }
     }
+    const tips = Array.from(
+      new Set(
+        userBills
+          .map((b) => CATEGORY_INFO[b.category ?? "outros"]?.tip)
+          .filter((t): t is string => !!t),
+      ),
+    );
     const message = [
       `${greeting} 💰`,
       "",
       ...sections,
       "",
-      "Não esqueça de pagar para evitar juros!",
+      ...(tips.length ? tips : ["Não esqueça de pagar para evitar juros!"]),
       "— Agenda Financeira",
     ].join("\n");
 
