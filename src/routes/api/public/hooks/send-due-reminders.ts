@@ -33,7 +33,7 @@ async function handler() {
 
   const { data: bills, error } = await supabaseAdmin
     .from("bills")
-    .select("id, user_id, description, amount, due_date")
+    .select("id, user_id, description, amount, due_date, category")
     .eq("status", "pending")
     .in("due_date", [today, tomorrow]);
 
@@ -87,7 +87,7 @@ async function handler() {
           : `⚠️ Vencem HOJE (${dueToday.length}):`,
       );
       for (const b of dueToday) {
-        sections.push(`• ${b.description} - ${formatBRL(Number(b.amount))}`);
+        sections.push(`${categoryEmoji(b.category)} ${categoryLabel(b.category)} — ${b.description}: ${formatBRL(Number(b.amount))}`);
       }
     }
     if (dueTomorrow.length) {
@@ -98,7 +98,7 @@ async function handler() {
           : `📅 Vencem AMANHÃ (${dueTomorrow.length}):`,
       );
       for (const b of dueTomorrow) {
-        sections.push(`• ${b.description} - ${formatBRL(Number(b.amount))} (${formatDateBR(b.due_date)})`);
+        sections.push(`${categoryEmoji(b.category)} ${categoryLabel(b.category)} — ${b.description}: ${formatBRL(Number(b.amount))} (${formatDateBR(b.due_date)})`);
       }
     }
     const message = [
@@ -166,4 +166,29 @@ function formatBRL(value: number): string {
 function formatDateBR(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+}
+
+const CATEGORY_INFO: Record<string, { emoji: string; label: string; tip: string }> = {
+  agua:        { emoji: "💧", label: "Água",         tip: "Evite o corte do abastecimento." },
+  luz:         { emoji: "💡", label: "Luz",          tip: "Evite o corte de energia." },
+  internet:    { emoji: "🌐", label: "Internet",     tip: "Evite ficar sem conexão." },
+  condominio:  { emoji: "🏢", label: "Condomínio",   tip: "Evite multas do condomínio." },
+  aluguel:     { emoji: "🏠", label: "Aluguel",      tip: "Evite juros e desgaste com o locador." },
+  iptu:        { emoji: "🏛️", label: "IPTU",         tip: "Evite multa e juros municipais." },
+  ipva:        { emoji: "🚗", label: "IPVA",         tip: "Mantenha o veículo regular." },
+  carro:       { emoji: "🚙", label: "Prest. carro", tip: "Evite juros do financiamento." },
+  seguro:      { emoji: "🛡️", label: "Seguro",       tip: "Mantenha sua cobertura ativa." },
+  telefone:    { emoji: "📞", label: "Telefone",     tip: "Evite a suspensão da linha." },
+  mercado:     { emoji: "🛒", label: "Mercado",      tip: "" },
+  combustivel: { emoji: "⛽", label: "Combustível",  tip: "" },
+  boleto:      { emoji: "🧾", label: "Boleto",       tip: "Evite juros e protesto." },
+  outros:      { emoji: "📌", label: "Outros",       tip: "" },
+};
+
+function categoryEmoji(key?: string | null): string {
+  return CATEGORY_INFO[key ?? "outros"]?.emoji ?? "📌";
+}
+
+function categoryLabel(key?: string | null): string {
+  return CATEGORY_INFO[key ?? "outros"]?.label ?? "Outros";
 }
