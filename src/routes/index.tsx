@@ -180,13 +180,13 @@ function HomePage() {
               Receitas registradas · {formatCurrency(stats.totalIncome)}
             </p>
             {stats.overdue.length > 0 && (
-              <p className="mt-1 text-sm text-warning-foreground bg-warning/30 inline-flex items-center gap-1 px-2 py-1 rounded-md">
+              <p className="mt-1 text-sm text-primary-foreground bg-warning/40 inline-flex items-center gap-1 px-2 py-1 rounded-md">
                 <AlertCircle className="h-3.5 w-3.5" />
                 {stats.overdue.length} em atraso · {formatCurrency(stats.totalOverdue)}
               </p>
             )}
             {stats.dueSoon.length > 0 && (
-              <p className="mt-2 text-sm text-warning-foreground bg-warning/30 flex w-fit items-center gap-1 px-2 py-1 rounded-md">
+              <p className="mt-2 text-sm text-primary-foreground bg-warning/40 flex w-fit items-center gap-1 px-2 py-1 rounded-md">
                 <Clock className="h-3.5 w-3.5" />
                 {stats.dueSoon.length} conta{stats.dueSoon.length > 1 ? "s" : ""} vencendo até amanhã
               </p>

@@ -22,8 +22,8 @@ export function BillCard({ bill, onPay, onEdit, onDelete, onUnpay }: Props) {
   let badge: { label: string; cls: string };
   if (isPaid) badge = { label: "Pago", cls: "bg-success/15 text-success" };
   else if (days < 0) badge = { label: `${Math.abs(days)}d atrasado`, cls: "bg-destructive/15 text-destructive" };
-  else if (days === 0) badge = { label: "Vence hoje", cls: "bg-warning/20 text-warning-foreground" };
-  else if (days <= 3) badge = { label: `Vence em ${days}d`, cls: "bg-warning/20 text-warning-foreground" };
+  else if (days === 0) badge = { label: "Vence hoje", cls: "bg-warning/20 text-foreground" };
+  else if (days <= 3) badge = { label: `Vence em ${days}d`, cls: "bg-warning/20 text-foreground" };
   else badge = { label: `Em ${days}d`, cls: "bg-muted text-muted-foreground" };
 
   return (
