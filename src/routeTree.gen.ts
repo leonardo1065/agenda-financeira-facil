@@ -15,6 +15,8 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsEmailRouteImport } from './routes/settings.email'
+import { Route as ApiEmailSendTestRouteImport } from './routes/api/email/send-test'
 import { Route as ApiPublicHooksSendDueRemindersRouteImport } from './routes/api/public/hooks/send-due-reminders'
 
 const SignupRoute = SignupRouteImport.update({
@@ -47,6 +49,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsEmailRoute = SettingsEmailRouteImport.update({
+  id: '/settings/email',
+  path: '/settings/email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEmailSendTestRoute = ApiEmailSendTestRouteImport.update({
+  id: '/api/email/send-test',
+  path: '/api/email/send-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSendDueRemindersRoute =
   ApiPublicHooksSendDueRemindersRouteImport.update({
     id: '/api/public/hooks/send-due-reminders',
@@ -61,6 +73,8 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/scanner-test': typeof ScannerTestRoute
   '/signup': typeof SignupRoute
+  '/settings/email': typeof SettingsEmailRoute
+  '/api/email/send-test': typeof ApiEmailSendTestRoute
   '/api/public/hooks/send-due-reminders': typeof ApiPublicHooksSendDueRemindersRoute
 }
 export interface FileRoutesByTo {
@@ -70,6 +84,8 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/scanner-test': typeof ScannerTestRoute
   '/signup': typeof SignupRoute
+  '/settings/email': typeof SettingsEmailRoute
+  '/api/email/send-test': typeof ApiEmailSendTestRoute
   '/api/public/hooks/send-due-reminders': typeof ApiPublicHooksSendDueRemindersRoute
 }
 export interface FileRoutesById {
@@ -80,6 +96,8 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/scanner-test': typeof ScannerTestRoute
   '/signup': typeof SignupRoute
+  '/settings/email': typeof SettingsEmailRoute
+  '/api/email/send-test': typeof ApiEmailSendTestRoute
   '/api/public/hooks/send-due-reminders': typeof ApiPublicHooksSendDueRemindersRoute
 }
 export interface FileRouteTypes {
@@ -91,6 +109,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scanner-test'
     | '/signup'
+    | '/settings/email'
+    | '/api/email/send-test'
     | '/api/public/hooks/send-due-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -100,6 +120,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scanner-test'
     | '/signup'
+    | '/settings/email'
+    | '/api/email/send-test'
     | '/api/public/hooks/send-due-reminders'
   id:
     | '__root__'
@@ -109,6 +131,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scanner-test'
     | '/signup'
+    | '/settings/email'
+    | '/api/email/send-test'
     | '/api/public/hooks/send-due-reminders'
   fileRoutesById: FileRoutesById
 }
@@ -119,6 +143,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScannerTestRoute: typeof ScannerTestRoute
   SignupRoute: typeof SignupRoute
+  SettingsEmailRoute: typeof SettingsEmailRoute
+  ApiEmailSendTestRoute: typeof ApiEmailSendTestRoute
   ApiPublicHooksSendDueRemindersRoute: typeof ApiPublicHooksSendDueRemindersRoute
 }
 
@@ -166,6 +192,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/email': {
+      id: '/settings/email'
+      path: '/settings/email'
+      fullPath: '/settings/email'
+      preLoaderRoute: typeof SettingsEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/email/send-test': {
+      id: '/api/email/send-test'
+      path: '/api/email/send-test'
+      fullPath: '/api/email/send-test'
+      preLoaderRoute: typeof ApiEmailSendTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/send-due-reminders': {
       id: '/api/public/hooks/send-due-reminders'
       path: '/api/public/hooks/send-due-reminders'
@@ -183,17 +223,10 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ScannerTestRoute: ScannerTestRoute,
   SignupRoute: SignupRoute,
+  SettingsEmailRoute: SettingsEmailRoute,
+  ApiEmailSendTestRoute: ApiEmailSendTestRoute,
   ApiPublicHooksSendDueRemindersRoute: ApiPublicHooksSendDueRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
