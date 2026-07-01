@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Wallet, AlertCircle, Clock, Search, LogOut, Loader2, TrendingUp, UserCog } from "lucide-react";
+import { Plus, Wallet, AlertCircle, Clock, Search, LogOut, Loader2, TrendingUp, UserCog, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -157,6 +157,15 @@ function HomePage() {
               className="text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
             >
               <UserCog className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate({ to: "/settings/email" })}
+              className="text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+              title="Avisos por e-mail"
+            >
+              <Mail className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
