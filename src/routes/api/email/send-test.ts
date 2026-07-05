@@ -67,24 +67,22 @@ async function handler({ request }: { request: Request }) {
 export async function sendEmail(params: { to: string; subject: string; html: string }): Promise<
   { ok: true } | { ok: false; message: string }
 > {
-  const lovableKey = process.env.LOVABLE_API_KEY;
   const resendKey = process.env.RESEND_API_KEY;
 
-  if (!lovableKey || !resendKey) {
+  if (!resendKey) {
     return {
       ok: false,
       message:
-        "O serviço de envio de e-mail ainda não está conectado. Peça para conectar o Resend na configuração do app para começar a enviar.",
+        "O serviço de envio de e-mail ainda não está configurado. Cadastre a chave do Resend para começar.",
     };
   }
 
   try {
-    const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": resendKey,
+        Authorization: `Bearer ${resendKey}`,
       },
       body: JSON.stringify({
         from: "Agenda Financeira <onboarding@resend.dev>",
