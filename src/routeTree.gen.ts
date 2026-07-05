@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsEmailRouteImport } from './routes/settings.email'
+import { Route as ApiWhatsappSendTestRouteImport } from './routes/api/whatsapp/send-test'
 import { Route as ApiEmailSendTestRouteImport } from './routes/api/email/send-test'
 import { Route as ApiPublicHooksSendDueRemindersRouteImport } from './routes/api/public/hooks/send-due-reminders'
 
@@ -54,6 +55,11 @@ const SettingsEmailRoute = SettingsEmailRouteImport.update({
   path: '/settings/email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWhatsappSendTestRoute = ApiWhatsappSendTestRouteImport.update({
+  id: '/api/whatsapp/send-test',
+  path: '/api/whatsapp/send-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEmailSendTestRoute = ApiEmailSendTestRouteImport.update({
   id: '/api/email/send-test',
   path: '/api/email/send-test',
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/settings/email': typeof SettingsEmailRoute
   '/api/email/send-test': typeof ApiEmailSendTestRoute
+  '/api/whatsapp/send-test': typeof ApiWhatsappSendTestRoute
   '/api/public/hooks/send-due-reminders': typeof ApiPublicHooksSendDueRemindersRoute
 }
 export interface FileRoutesByTo {
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/settings/email': typeof SettingsEmailRoute
   '/api/email/send-test': typeof ApiEmailSendTestRoute
+  '/api/whatsapp/send-test': typeof ApiWhatsappSendTestRoute
   '/api/public/hooks/send-due-reminders': typeof ApiPublicHooksSendDueRemindersRoute
 }
 export interface FileRoutesById {
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/settings/email': typeof SettingsEmailRoute
   '/api/email/send-test': typeof ApiEmailSendTestRoute
+  '/api/whatsapp/send-test': typeof ApiWhatsappSendTestRoute
   '/api/public/hooks/send-due-reminders': typeof ApiPublicHooksSendDueRemindersRoute
 }
 export interface FileRouteTypes {
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/settings/email'
     | '/api/email/send-test'
+    | '/api/whatsapp/send-test'
     | '/api/public/hooks/send-due-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/settings/email'
     | '/api/email/send-test'
+    | '/api/whatsapp/send-test'
     | '/api/public/hooks/send-due-reminders'
   id:
     | '__root__'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/settings/email'
     | '/api/email/send-test'
+    | '/api/whatsapp/send-test'
     | '/api/public/hooks/send-due-reminders'
   fileRoutesById: FileRoutesById
 }
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SettingsEmailRoute: typeof SettingsEmailRoute
   ApiEmailSendTestRoute: typeof ApiEmailSendTestRoute
+  ApiWhatsappSendTestRoute: typeof ApiWhatsappSendTestRoute
   ApiPublicHooksSendDueRemindersRoute: typeof ApiPublicHooksSendDueRemindersRoute
 }
 
@@ -199,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/whatsapp/send-test': {
+      id: '/api/whatsapp/send-test'
+      path: '/api/whatsapp/send-test'
+      fullPath: '/api/whatsapp/send-test'
+      preLoaderRoute: typeof ApiWhatsappSendTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/email/send-test': {
       id: '/api/email/send-test'
       path: '/api/email/send-test'
@@ -225,6 +245,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SettingsEmailRoute: SettingsEmailRoute,
   ApiEmailSendTestRoute: ApiEmailSendTestRoute,
+  ApiWhatsappSendTestRoute: ApiWhatsappSendTestRoute,
   ApiPublicHooksSendDueRemindersRoute: ApiPublicHooksSendDueRemindersRoute,
 }
 export const routeTree = rootRouteImport

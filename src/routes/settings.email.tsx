@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Mail, Send, CheckCircle2, XCircle, Loader2, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Send, CheckCircle2, XCircle, Loader2, Clock, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,7 @@ function EmailSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingWa, setTestingWa] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     recipient_email: "",
     send_hour: 8,
@@ -140,6 +141,35 @@ function EmailSettingsPage() {
       });
     } finally {
       setTesting(false);
+      load();
+    }
+  }
+
+  async function handleTestWhatsapp() {
+    if (!session) return;
+    setTestingWa(true);
+    try {
+      const res = await fetch("/api/whatsapp/send-test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (body?.ok) {
+        toast.success("WhatsApp enviado!", { description: body.message });
+      } else {
+        toast.error("Não foi possível enviar", {
+          description: body?.message ?? "Tente novamente em alguns instantes.",
+        });
+      }
+    } catch (e) {
+      toast.error("Falha de rede", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setTestingWa(false);
       load();
     }
   }
@@ -253,6 +283,26 @@ function EmailSettingsPage() {
                 <Send className="h-4 w-4" />
               )}
               Enviar teste
+            </Button>
+          </div>
+
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground mb-2">
+              Alternativa mais confiável: envie um teste pelo WhatsApp cadastrado no seu perfil.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleTestWhatsapp}
+              disabled={testingWa || loading}
+              className="w-full"
+            >
+              {testingWa ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageCircle className="h-4 w-4" />
+              )}
+              Enviar teste no WhatsApp
             </Button>
           </div>
         </section>
