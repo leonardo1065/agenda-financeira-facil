@@ -9,35 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as ScannerTestRouteImport } from './routes/scanner-test'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ScannerTestRouteImport } from './routes/scanner-test'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsEmailRouteImport } from './routes/settings.email'
-import { Route as ApiWhatsappSendTestRouteImport } from './routes/api/whatsapp/send-test'
 import { Route as ApiEmailSendTestRouteImport } from './routes/api/email/send-test'
+import { Route as ApiWhatsappSendTestRouteImport } from './routes/api/whatsapp/send-test'
 import { Route as ApiPublicHooksSendDueRemindersRouteImport } from './routes/api/public/hooks/send-due-reminders'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScannerTestRoute = ScannerTestRouteImport.update({
-  id: '/scanner-test',
-  path: '/scanner-test',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -45,9 +30,24 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScannerTestRoute = ScannerTestRouteImport.update({
+  id: '/scanner-test',
+  path: '/scanner-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsEmailRoute = SettingsEmailRouteImport.update({
@@ -55,14 +55,14 @@ const SettingsEmailRoute = SettingsEmailRouteImport.update({
   path: '/settings/email',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiWhatsappSendTestRoute = ApiWhatsappSendTestRouteImport.update({
-  id: '/api/whatsapp/send-test',
-  path: '/api/whatsapp/send-test',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiEmailSendTestRoute = ApiEmailSendTestRouteImport.update({
   id: '/api/email/send-test',
   path: '/api/email/send-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWhatsappSendTestRoute = ApiWhatsappSendTestRouteImport.update({
+  id: '/api/whatsapp/send-test',
+  path: '/api/whatsapp/send-test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksSendDueRemindersRoute =
@@ -163,32 +163,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scanner-test': {
-      id: '/scanner-test'
-      path: '/scanner-test'
-      fullPath: '/scanner-test'
-      preLoaderRoute: typeof ScannerTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -198,11 +177,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scanner-test': {
+      id: '/scanner-test'
+      path: '/scanner-test'
+      fullPath: '/scanner-test'
+      preLoaderRoute: typeof ScannerTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/email': {
@@ -212,18 +212,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/whatsapp/send-test': {
-      id: '/api/whatsapp/send-test'
-      path: '/api/whatsapp/send-test'
-      fullPath: '/api/whatsapp/send-test'
-      preLoaderRoute: typeof ApiWhatsappSendTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/email/send-test': {
       id: '/api/email/send-test'
       path: '/api/email/send-test'
       fullPath: '/api/email/send-test'
       preLoaderRoute: typeof ApiEmailSendTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/whatsapp/send-test': {
+      id: '/api/whatsapp/send-test'
+      path: '/api/whatsapp/send-test'
+      fullPath: '/api/whatsapp/send-test'
+      preLoaderRoute: typeof ApiWhatsappSendTestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/send-due-reminders': {
@@ -251,12 +251,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
