@@ -165,3 +165,14 @@
   top: 0;
   animation: scanner-laser-move 1.6s ease-in-out infinite;
 }
+
+/* Hide the "Edit with Lovable" / "Made with Lovable" badge on published deployments */
+#lovable-badge,
+[id^="lovable-badge"],
+a[href*="lovable.dev"][target="_blank"],
+a[href*="lovable.app"][target="_blank"][class*="badge"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
